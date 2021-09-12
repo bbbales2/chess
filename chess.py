@@ -1,259 +1,154 @@
-from dataclasses import dataclass
+import math
 import numpy
+import sys
 from typing import List, Dict, Tuple
-#import pygame
+import pygame
+from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_b, K_c
+import concurrent.futures
 
-# pygame.init()
-# screen = pygame.display.set_mode((640, 480))
-# pygame.display.set_caption("Chess")
+from board import Board, Move, Position
 
-@dataclass(frozen = True)
-class Position():
-    x : int
-    y : int
+executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
 
-@dataclass(frozen = True)
-class Move():
-    src : Position
-    dst : Position
+def do_ai():
+    sum([i for i in range(0, 10**7)])
+    return (Position(5, 3), Position(6, 4))
 
-dmax = 3
-values : Dict[int, float] = {
-    0 : 0.0,
-    1 : 100.0,
-    2 : 300.0,
-    3 : 320.0,
-    4 : 500.0,
-    5 : 900.0,
-    6 : 1000000.0
-}
-pawn_position_bonus = numpy.array([
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 100, 100, 0, 0, 0],
-    [0, 0, 100, 300, 300, 100, 0, 0],
-    [0, 0, 100, 300, 300, 100, 0, 0],
-    [0, 0, 0, 100, 100, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-])
-board : numpy.array = numpy.zeros([8, 8]).astype(int)
-moves : List[List[Move]] = dmax * [[]]
-mptr : List[int] = dmax * [0]
-scores : List[float] = (dmax + 1) * [0]
-pc : List[List[Move]] = dmax * [[]]
-clist : List[Tuple[Move, int]] = []
-ply = 0
-player_sign = 1
+pygame.init()
+screen = pygame.display.set_mode((480, 520))
+pygame.display.set_caption("Chess")
 
-def reset_board():
-    global board
-    board = numpy.zeros([8, 8]).astype(int)
-    for i in range(8):
-        board[i, 1] = 1
-        board[i, 6] = -1
-    board[0, 0] = 4
-    board[7, 0] = 4
-    board[0, 7] = -4
-    board[7, 7] = -4
-    board[1, 0] = 2
-    board[6, 0] = 2
-    board[1, 7] = -2
-    board[6, 7] = -2
-    board[2, 0] = 3
-    board[5, 0] = 3
-    board[2, 7] = -3
-    board[5, 7] = -3
-    board[3, 0] = 5
-    board[4, 0] = 6
-    board[3, 7] = -5
-    board[4, 7] = -6
+background = pygame.Surface(screen.get_size())
+background = background.convert()
+background.fill((120, 120, 120))
+colors = [(80, 80, 80), (160, 160, 160)]
+for x in range(8):
+    for y in range(8):
+        color = colors[(x + y) % 2]
+        base_x = x * 60 + 1
+        base_y = (7 - y) * 60 + 1
+        rect = (base_x, base_y, 58, 58)
+        background.fill(color, rect)
 
-def can_move_space(pos):
-    x = pos.x
-    y = pos.y
-    if x >= 0 and x < board.shape[0] and y >= 0 and y < board.shape[1]:
-        if board[x, y] == 0:
-            return True
-        else:
-            return False
-    return False
-
-def can_capture_space(pos, player_sign):
-    x = pos.x
-    y = pos.y
-    if x >= 0 and x < board.shape[0] and y >= 0 and y < board.shape[1]:
-        if player_sign * board[x, y] < 0:
-            return True
-        else:
-            return False
-    return False
-
-def generate_moves(player_sign):
-    if player_sign not in [1, -1]:
-        raise Exception("Player sign must be 1 or -1")
-
-    moves : List[Move] = []
-
-    # Return a list (100x4) of moves for the given board state and ply
-    for x in range(8):
-        for y in range(8):
-            src = Position(x, y)
-            signed_piece = board[x, y]
-
-            if signed_piece * player_sign < 0:
-                continue
-
-            piece = abs(signed_piece)
-            if piece == 1:
-                dst = Position(x, y + player_sign)
-                if can_move_space(dst):
-                    moves.append(Move(src, dst))
-
-                    dst = Position(x, y + 2 * player_sign)
-                    if y == player_sign or (y - 7) == player_sign and can_move_space(dst):
-                        moves.append(Move(src, dst))
-
-                dst = Position(x + 1, y + player_sign)
-                if can_capture_space(dst, player_sign):
-                    moves.append(Move(src, dst))
-
-                dst = Position(x - 1, y + player_sign)
-                if can_capture_space(dst, player_sign):
-                    moves.append(Move(src, dst))
-    
-    return moves
-
-
-def evaluate_position():
-    # Return score of current board
-    total_value = 0.0
-
-    for x in range(8):
-        for y in range(8):
-            signed_piece = board[x, y]
-            sign = numpy.sign(signed_piece)
-            piece = abs(signed_piece)
-            value = abs(values[piece])
-            if piece == 1:
-                value += pawn_position_bonus[x, y]
-            total_value += sign * value
-    
-    return total_value
-
-def update_position(move : Move):
-    # Update the board with a new move
-    if board[move.src.x, move.src.y] == 0:
-        raise Exception(f"No piece at {move.src} to move")
-    
-    previous_piece = board[move.dst.x, move.dst.y]
-    board[move.dst.x, move.dst.y] = board[move.src.x, move.src.y]
-    board[move.src.x, move.src.y] = 0
-    clist.append((move, previous_piece))
-
-    global ply
-    ply += 1
-
-def restore_position():
-    # Pop a board change off the clist to return the board to a previous state
-    move, previous_piece = clist.pop()
-
-    board[move.src.x, move.src.y] = board[move.dst.x, move.dst.y]
-    board[move.dst.x, move.dst.y] = previous_piece
-
-    global ply
-    ply -= 1
-
-def pc_update():
-    # Update the principle continuation for ply - 1
-    if ply == 0:
-        return
-
-    if (ply - 1) == 0:
-        a = 1
-
-    # Odd plies minimize, even plies maximize
-    if (ply - 1) % 2 == 0:
-        do_update = scores[ply] > scores[ply - 1]
-    else:
-        do_update = scores[ply] < scores[ply - 1]
-
-    if do_update:
-        scores[ply - 1] = scores[ply]
-        if ply < len(pc):
-            current_pc = pc[ply]
-        else:
-            current_pc = []
-        pc[ply - 1] = [moves[ply - 1][mptr[ply - 1]]] + current_pc
-
-def print_board():
-    symbols = {
-        0 : "-",
-        1 : "p",
-        2 : "h",
-        3 : "b",
-        4 : "r",
-        5 : "q",
-        6 : "k"
+font = pygame.font.Font(None, 36)
+piece_sprites = {
+    1 : {
+        1 : font.render("p", 1, (250, 250, 250)),
+        2 : font.render("h", 1, (250, 250, 250)),
+        3 : font.render("b", 1, (250, 250, 250)),
+        4 : font.render("r", 1, (250, 250, 250)),
+        5 : font.render("q", 1, (250, 250, 250)),
+        6 : font.render("k", 1, (250, 250, 250))
+    },
+    -1 : {
+        1 : font.render("p", 1, (10, 10, 10)),
+        2 : font.render("h", 1, (10, 10, 10)),
+        3 : font.render("b", 1, (10, 10, 10)),
+        4 : font.render("r", 1, (10, 10, 10)),
+        5 : font.render("q", 1, (10, 10, 10)),
+        6 : font.render("k", 1, (10, 10, 10))
     }
-    blue = "\033[91m"
-    green = "\033[92m"
-    yellow = "\033[93m"
-    end = "\033[0m"
-    for y in range(7, -1, -1):
-        characters = []
-        for x in range(8):
-            signed_piece = board[x, y]
-            piece = abs(signed_piece)
-            if signed_piece > 0:
-                color = green
-            elif signed_piece < 0:
-                color = yellow
-            else:
-                color = blue
-            characters.append(f"{color}{symbols[piece]}{end}")
+}
+computing_text = font.render("Computing next move...", 1, (250, 250, 250))
+done_text = font.render("Done!", 1, (250, 250, 250))
+hover_sprite = pygame.Surface((58, 58))
+hover_sprite.fill((200, 120, 120))
+selected_sprite = pygame.Surface((58, 58))
+selected_sprite.fill((220, 220, 120))
+ai_sprite = pygame.Surface((58, 58))
+ai_sprite.fill((120, 120, 220))
 
-        print("".join(characters))
+clock = pygame.time.Clock()
 
-reset_board()
+board = Board()
 
-print_board()
+selected = None
+hovered = None
+moves = []
+ai = None
+ai_src = None
+ai_dst = None
+while 1:
+    screen_x, screen_y = pygame.mouse.get_pos()
 
-moves[ply] = generate_moves(player_sign)
-mptr[ply] = 0
-scores[ply] = -float('inf')
+    x = math.floor(screen_x / 60)
+    y = math.floor((480 - screen_y) / 60)
+    pos = Position(x, y)
 
-while True:
-    if mptr[ply] == len(moves[ply]):
-        if ply == 2:
-            a = 1
-        pc_update()
-
-        if ply == 0:
-            break
-
-        restore_position()
-
-        mptr[ply] += 1
+    if x < 8 and y < 8:
+        hovered = pos
     else:
-        update_position(moves[ply][mptr[ply]])
-        if ply == 1:
-            a = 1
-        if ply < dmax:
-            # If not at last layer, advance layer
-            moves[ply] = generate_moves(player_sign * (-1)**ply)
-            mptr[ply] = 0
-            scores[ply] = -1 * (-1)**ply * float('inf')
-        elif ply == dmax:
-            # If at last layer, evaluate score
-            scores[ply] = evaluate_position()
+        hovered = None
 
-            pc_update()
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            sys.exit()
+        elif event.type == KEYDOWN:
+            if event.key == K_b:
+                if len(moves) > 0:
+                    (src, dst), previous_piece = moves.pop()
+                    board.move(dst, src, previous_piece)
+                    ai_src = None
+                    ai_dst = None
+            elif event.key == K_c:
+                ai = executor.submit(do_ai)
+            selected = None
+            ai_src = None
+            ai_dst = None
+        elif event.type == MOUSEBUTTONDOWN:
+            if screen_y < 480:
+                if selected == None:
+                    if board.occupied(pos):
+                        selected = pos
+                else:
+                    previous_piece = board.move(selected, pos)
+                    moves.append(((selected, pos), previous_piece))
+                    selected = None
+                    ai_src = None
+                    ai_dst = None
+    if ai is not None and ai.done():
+        ai_src, ai_dst = ai.result()
+        ai = None
+    
+    screen.blit(background, (0, 0))
+    for x in range(8):
+        for y in range(8):
+            if ai_src is not None and ai_src.x == x and ai_src.y == y:
+                screen.blit(ai_sprite, (x * 60 + 1, (420 - y * 60) + 1, 58, 58))
 
-            restore_position()
+            if ai_dst is not None and ai_dst.x == x and ai_dst.y == y:
+                screen.blit(ai_sprite, (x * 60 + 1, (420 - y * 60) + 1, 58, 58))
 
-            mptr[ply] += 1
-        else:
-            raise Exception("Unhandled state")
+            if hovered is not None and hovered.x == x and hovered.y == y:
+                screen.blit(hover_sprite, (x * 60 + 1, (420 - y * 60) + 1, 58, 58))
+            
+            if selected is not None and selected.x == x and selected.y == y:
+                screen.blit(selected_sprite, (x * 60 + 1, (420 - y * 60) + 1, 58, 58))
 
-print(pc[0][0])
+            signed_piece = board.board[y, x]
+            piece = abs(signed_piece)
+            player_sign = numpy.sign(signed_piece)
+
+            if piece == 0:
+                continue
+            sprite = piece_sprites[player_sign][piece]
+
+            centerx = 30 + x * 60
+            centery = 480 - 30 - y * 60
+            pos = sprite.get_rect(centerx = centerx, centery = centery)
+            screen.blit(sprite, pos)
+
+            if ai is not None:
+                text = computing_text
+            elif ai_src is not None:
+                text = done_text
+            else:
+                text = None
+
+            if text is not None:
+                pos = text.get_rect(centerx = 240, centery = 500)
+                screen.blit(text, pos)
+
+    pygame.display.flip()
+    clock.tick(60)
+
