@@ -1,12 +1,7 @@
+from typing import List, Tuple, Dict
+from board import Board, Move, Position
 
-dmax = 3
-moves : List[List[Move]] = dmax * [[]]
-mptr : List[int] = dmax * [0]
-scores : List[float] = (dmax + 1) * [0]
-pc : List[List[Move]] = dmax * [[]]
-clist : List[Tuple[Move, int]] = []
-ply = 0
-player_sign = 1
+import numpy
 
 def generate_moves(board : Board, player_sign : int):
     if player_sign not in [1, -1]:
@@ -18,7 +13,7 @@ def generate_moves(board : Board, player_sign : int):
     for x in range(8):
         for y in range(8):
             src = Position(x, y)
-            signed_piece = board.board[x, y]
+            signed_piece = board[src]
 
             if signed_piece * player_sign < 0:
                 continue
@@ -70,97 +65,95 @@ def evaluate_position(board):
 
     for x in range(8):
         for y in range(8):
-            signed_piece = board.board[x, y]
+            signed_piece = board[Position(x, y)]
             sign = numpy.sign(signed_piece)
             piece = abs(signed_piece)
             value = abs(values[piece])
             if piece == 1:
-                value += pawn_position_bonus[x, y]
+                value += pawn_position_bonus[y, x]
             total_value += sign * value
     
     return total_value
 
-def update_position(move : Move):
-    # Update the board with a new move
-    if board[move.src.x, move.src.y] == 0:
-        raise Exception(f"No piece at {move.src} to move")
-    
-    previous_piece = board[move.dst.x, move.dst.y]
-    board[move.dst.x, move.dst.y] = board[move.src.x, move.src.y]
-    board[move.src.x, move.src.y] = 0
-    clist.append((move, previous_piece))
+class AIGame:
+    board : Board
+    dmax : int = 3
 
-    global ply
-    ply += 1
+    def __init__(self, board_ : Board):
+        self.board = board_
 
-def restore_position():
-    # Pop a board change off the clist to return the board to a previous state
-    move, previous_piece = clist.pop()
+    def update_position(self, move : Move, clist : List[Move], ply : int):
+        # Update the board with a new move
+        previous_piece = self.board.move(move.src, move.dst)
+        clist.append((move, previous_piece))
+        ply += 1
 
-    board[move.src.x, move.src.y] = board[move.dst.x, move.dst.y]
-    board[move.dst.x, move.dst.y] = previous_piece
+    def restore_position(self, clist : List[Move], ply : int):
+        # Pop a board change off the clist to return the board to a previous state
+        move, previous_piece = clist.pop()
+        ply -= 1
+        self.board.move(move.dst, move.src, previous_piece)
 
-    global ply
-    ply -= 1
+    def pc_update(self, mptr, moves, scores, pc, ply, player_sign):
+        # Update the principle continuation for ply - 1
+        if ply == 0:
+            return
 
-def pc_update(self, mptr, moves, scores, pc, ply):
-    # Update the principle continuation for ply - 1
-    if ply == 0:
-        return
-
-    if (ply - 1) == 0:
-        a = 1
-
-    # Odd plies minimize, even plies maximize
-    if (ply - 1) % 2 == 0:
-        do_update = scores[ply] > scores[ply - 1]
-    else:
-        do_update = scores[ply] < scores[ply - 1]
-
-    if do_update:
-        scores[ply - 1] = scores[ply]
-        if ply < len(pc):
-            current_pc = pc[ply]
+        # Odd plies minimize, even plies maximize
+        if (ply - 1) % 2 == 0:
+            do_update = scores[ply] > scores[ply - 1]
         else:
-            current_pc = []
-        pc[ply - 1] = [moves[ply - 1][mptr[ply - 1]]] + current_pc
+            do_update = scores[ply] < scores[ply - 1]
 
-def pick_next_move():
-    moves[ply] = generate_moves(player_sign)
-    mptr[ply] = 0
-    scores[ply] = -float('inf')
+        # Invert the logic for other player
+        if player_sign == -1:
+            do_update = not do_update
 
-    while True:
-        if mptr[ply] == len(moves[ply]):
-            if ply == 2:
-                a = 1
-            pc_update()
+        if do_update:
+            scores[ply - 1] = scores[ply]
+            if ply < len(pc):
+                current_pc = pc[ply]
+            else:
+                current_pc = []
+            pc[ply - 1] = [moves[ply - 1][mptr[ply - 1]]] + current_pc
 
-            if ply == 0:
-                break
+    def pick_next_move(self, active_player_sign : int):
+        moves : List[List[Move]] = self.dmax * [[]]
+        mptr : List[int] = self.dmax * [0]
+        scores : List[float] = (self.dmax + 1) * [0]
+        pc : List[List[Move]] = self.dmax * [[]]
+        clist : List[Tuple[Move, int]] = []
+        ply : int = 0
+        player_sign : int = 1
 
-            restore_position()
+        moves[ply] = generate_moves(self.board, player_sign)
+        mptr[ply] = 0
+        scores[ply] = player_sign * -float('inf')
 
-            mptr[ply] += 1
-        else:
-            update_position(moves[ply][mptr[ply]])
-            if ply == 1:
-                a = 1
-            if ply < dmax:
-                # If not at last layer, advance layer
-                moves[ply] = generate_moves(player_sign * (-1)**ply)
-                mptr[ply] = 0
-                scores[ply] = -1 * (-1)**ply * float('inf')
-            elif ply == dmax:
-                # If at last layer, evaluate score
-                scores[ply] = evaluate_position()
+        while True:
+            if mptr[ply] == len(moves[ply]):
+                self.pc_update(mptr, moves, scores, pc, ply, player_sign)
 
-                pc_update()
+                if ply == 0:
+                    break
 
-                restore_position()
-
+                self.restore_position(clist, ply)
                 mptr[ply] += 1
             else:
-                raise Exception("Unhandled state")
+                next_move = moves[ply][mptr[ply]]
+                self.update_position(next_move, clist, ply)
+                if ply < self.dmax:
+                    # If not at last layer, advance layer
+                    moves[ply] = generate_moves(self.board, player_sign * (-1)**ply)
+                    mptr[ply] = 0
+                    scores[ply] = player_sign * (-1)**ply * -float('inf')
+                elif ply == self.dmax:
+                    # If at last layer, evaluate score
+                    scores[ply] = evaluate_position(self.board)
+                    self.pc_update(mptr, moves, scores, pc, ply, player_sign)
+                    self.restore_position(clist, ply)
+                    mptr[ply] += 1
+                else:
+                    raise Exception("Unhandled state")
 
-    return pc[0][0]
+        return pc[0][0]

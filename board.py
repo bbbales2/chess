@@ -50,15 +50,33 @@ class Board:
                 return False
         return False
     
-    def occupied(self, pos):
-      return self.board[pos.y, pos.x] != 0
+    def __getitem__(self, pos : Position):
+        x = pos.x
+        y = pos.y
 
-    def move(self, src, dst, replacement_piece = 0):
+        if y < 0 or y >= self.board.shape[0] or x < 0 or x >= self.board.shape[1]:
+            raise Exception(f"{pos} is not a valid position")
+
+        return self.board[y, x]
+    
+    def __setitem__(self, pos : Position, val):
+        x = pos.x
+        y = pos.y
+
+        if y < 0 or y >= self.board.shape[0] or x < 0 or x >= self.board.shape[1]:
+            raise Exception(f"{pos} is not a valid position")
+
+        self.board[y, x] = val
+    
+    def occupied(self, pos : Position):
+      return self[pos] != 0
+
+    def move(self, src : Position, dst : Position, replacement_piece : int = 0):
         # Update the board with a new move
         if not self.occupied(src):
             raise Exception(f"No piece at {src} to move")
 
-        previous_piece = self.board[dst.y, dst.x]
-        self.board[dst.y, dst.x] = self.board[src.y, src.x]
-        self.board[src.y, src.x] = replacement_piece
+        previous_piece = self[dst]
+        self[dst] = self[src]
+        self[src] = replacement_piece
         return previous_piece

@@ -1,18 +1,15 @@
+from ai import AIGame
 import math
 import numpy
 import sys
 from typing import List, Dict, Tuple
 import pygame
-from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_b, K_c
+from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_b, K_c, K_v
 import concurrent.futures
 
 from board import Board, Move, Position
 
 executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
-
-def do_ai():
-    sum([i for i in range(0, 10**7)])
-    return (Position(5, 3), Position(6, 4))
 
 pygame.init()
 screen = pygame.display.set_mode((480, 520))
@@ -49,6 +46,7 @@ piece_sprites = {
         6 : font.render("k", 1, (10, 10, 10))
     }
 }
+
 computing_text = font.render("Computing next move...", 1, (250, 250, 250))
 done_text = font.render("Done!", 1, (250, 250, 250))
 hover_sprite = pygame.Surface((58, 58))
@@ -61,6 +59,11 @@ ai_sprite.fill((120, 120, 220))
 clock = pygame.time.Clock()
 
 board = Board()
+
+def do_ai(board : Board, active_player_sign : int):
+    ai = AIGame(board)
+    move = ai.pick_next_move(active_player_sign)
+    return (move.src, move.dst)
 
 selected = None
 hovered = None
@@ -91,7 +94,9 @@ while 1:
                     ai_src = None
                     ai_dst = None
             elif event.key == K_c:
-                ai = executor.submit(do_ai)
+                ai = executor.submit(do_ai, board, 1)
+            elif event.key == K_v:
+                ai = executor.submit(do_ai, board, -1)
             selected = None
             ai_src = None
             ai_dst = None
@@ -125,7 +130,8 @@ while 1:
             if selected is not None and selected.x == x and selected.y == y:
                 screen.blit(selected_sprite, (x * 60 + 1, (420 - y * 60) + 1, 58, 58))
 
-            signed_piece = board.board[y, x]
+            pos = Position(x, y)
+            signed_piece = board[pos]
             piece = abs(signed_piece)
             player_sign = numpy.sign(signed_piece)
 
