@@ -71,7 +71,14 @@ moves = []
 ai = None
 ai_src = None
 ai_dst = None
-while 1:
+
+def draw():
+    global selected
+    global hovered
+    global moves
+    global ai
+    global ai_src
+    global ai_dst
     screen_x, screen_y = pygame.mouse.get_pos()
 
     x = math.floor(screen_x / 60)
@@ -156,5 +163,8 @@ while 1:
                 screen.blit(text, pos)
 
     pygame.display.flip()
+
+while 1:
+    draw()
     clock.tick(60)
 

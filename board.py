@@ -6,6 +6,15 @@ class Position():
     x : int
     y : int
 
+    def __add__(self, other):
+        return Position(self.x + other.x, self.y + other.y)
+    
+    def __mul__(self, other):
+        return Position(self.x * other, self.y * other)
+    
+    def __rmul__(self, other):
+        return self * other
+
 @dataclass(frozen = True)
 class Move():
     src : Position
@@ -73,9 +82,6 @@ class Board:
 
     def move(self, src : Position, dst : Position, replacement_piece : int = 0):
         # Update the board with a new move
-        if not self.occupied(src):
-            raise Exception(f"No piece at {src} to move")
-
         previous_piece = self[dst]
         self[dst] = self[src]
         self[src] = replacement_piece
