@@ -28,22 +28,30 @@ for x in range(8):
         background.fill(color, rect)
 
 font = pygame.font.Font(None, 36)
+PIECE_SIZE = 40
+
+
+def piece_sprite(col, typ, SIZE: int):
+    im = pygame.image.load("sprites/" + col + "_" + typ + "_png_128px.png")
+    return pygame.transform.scale(im.convert_alpha(), (SIZE, SIZE))
+
+
 piece_sprites = {
     1 : {
-        1 : font.render("p", 1, (250, 250, 250)),
-        2 : font.render("h", 1, (250, 250, 250)),
-        3 : font.render("b", 1, (250, 250, 250)),
-        4 : font.render("r", 1, (250, 250, 250)),
-        5 : font.render("q", 1, (250, 250, 250)),
-        6 : font.render("k", 1, (250, 250, 250))
+        1 : piece_sprite("w", "pawn", PIECE_SIZE),
+        2 : piece_sprite("w", "knight", PIECE_SIZE),
+        3 : piece_sprite("w", "bishop", PIECE_SIZE),
+        4 : piece_sprite("w", "rook", PIECE_SIZE),
+        5 : piece_sprite("w", "queen", PIECE_SIZE),
+        6 : piece_sprite("w", "king", PIECE_SIZE),
     },
     -1 : {
-        1 : font.render("p", 1, (10, 10, 10)),
-        2 : font.render("h", 1, (10, 10, 10)),
-        3 : font.render("b", 1, (10, 10, 10)),
-        4 : font.render("r", 1, (10, 10, 10)),
-        5 : font.render("q", 1, (10, 10, 10)),
-        6 : font.render("k", 1, (10, 10, 10))
+        1 : piece_sprite("b", "pawn", PIECE_SIZE),
+        2 : piece_sprite("b", "knight", PIECE_SIZE),
+        3 : piece_sprite("b", "bishop", PIECE_SIZE),
+        4 : piece_sprite("b", "rook", PIECE_SIZE),
+        5 : piece_sprite("b", "queen", PIECE_SIZE),
+        6 : piece_sprite("b", "king", PIECE_SIZE),
     }
 }
 
