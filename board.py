@@ -84,6 +84,10 @@ class Board:
     def occupied(self, pos: Position):
         return self[pos] != 0
 
+    def occupying_player(self, pos):
+        """Check which player is occupying a position pos."""
+        return numpy.sign(self[pos])
+
     def move(self, src: Position, dst: Position, replacement_piece: int = 0):
         # Update the board with a new move
         previous_piece = self[dst]

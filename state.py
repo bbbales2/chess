@@ -65,9 +65,11 @@ class GameState:
             self.selected = pos
 
     def perform_move(self, src: Position, dst: Position):
-        """Perform move from source to destination and update state."""
-        previous_piece = self.board.move(src, dst)
-        self.moves.append(((src, dst), previous_piece))
+        """Perform move from source to destination and update state, if it is source occupiers turn."""
+        player = self.check_whose_turn()
+        if player == self.board.occupying_player(src):
+            previous_piece = self.board.move(src, dst)
+            self.moves.append(((src, dst), previous_piece))
 
     def start_ai_computation(self, executor, player_sign):
         """Send AI computation to executor and update state."""
