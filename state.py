@@ -22,7 +22,7 @@ class GameState:
         text_font = pygame.font.Font(None, 32)
         text_color = (80, 80, 180)
         self.compute_text = text_font.render("Computing...", 1, text_color)
-        self.done_text = text_font.render("Done!", 1, text_color)
+        self.done_text = text_font.render("Done! (press SPACE)", 1, text_color)
         self.black_turn_text = text_font.render("Black to move.", 1, (5, 5, 5))
         self.white_turn_text = text_font.render("White to move.", 1, (250, 250, 250))
 
@@ -100,3 +100,7 @@ class GameState:
             text = self.white_turn_text
         return text
 
+    def execute_ai_move(self):
+        """Execute the current suggested AI move."""
+        if self.ai_src is not None:
+            self.perform_move(self.ai_src, self.ai_dst)

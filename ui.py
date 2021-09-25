@@ -99,7 +99,7 @@ def draw_board(screen, background, state, piece_sprites, square_sprites, square_
             # Draw the AI info text
             text = state.get_ai_text()
             if text is not None:
-                pos = text.get_rect(centerx=360, centery=500)
+                pos = text.get_rect(centerx=320, centery=500)
                 screen.blit(text, pos)
 
             # Draw the turn info text
