@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 import numpy
 
-@dataclass(frozen = True)
-class Position():
-    x : int
-    y : int
+
+@dataclass(frozen=True)
+class Position:
+    x: int
+    y: int
 
     def __add__(self, other):
         return Position(self.x + other.x, self.y + other.y)
@@ -15,15 +16,18 @@ class Position():
     def __rmul__(self, other):
         return self * other
 
-@dataclass(frozen = True)
-class Move():
-    src : Position
-    dst : Position
+
+@dataclass(frozen=True)
+class Move:
+    src: Position
+    dst: Position
+
 
 class Board:
-    board : numpy.array = numpy.zeros([8, 8]).astype(int)
+    board: numpy.array = numpy.zeros([8, 8]).astype(int)
+
     def __init__(self):
-      self.reset()
+        self.reset()
 
     def reset(self):
         board = numpy.array([
@@ -59,7 +63,7 @@ class Board:
                 return False
         return False
     
-    def __getitem__(self, pos : Position):
+    def __getitem__(self, pos: Position):
         x = pos.x
         y = pos.y
 
@@ -68,7 +72,7 @@ class Board:
 
         return self.board[y, x]
     
-    def __setitem__(self, pos : Position, val):
+    def __setitem__(self, pos: Position, val):
         x = pos.x
         y = pos.y
 
@@ -77,10 +81,10 @@ class Board:
 
         self.board[y, x] = val
     
-    def occupied(self, pos : Position):
-      return self[pos] != 0
+    def occupied(self, pos: Position):
+        return self[pos] != 0
 
-    def move(self, src : Position, dst : Position, replacement_piece : int = 0):
+    def move(self, src: Position, dst: Position, replacement_piece: int = 0):
         # Update the board with a new move
         previous_piece = self[dst]
         self[dst] = self[src]

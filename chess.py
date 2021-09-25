@@ -1,13 +1,12 @@
 import math
 import numpy
 import sys
-from typing import List, Dict, Tuple
 import pygame
 from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_b, K_c, K_v
 import concurrent.futures
 
 from ai import AIGame
-from board import Board, Move, Position
+from board import Board, Position
 from ui import create_background, create_piece_sprites, create_square_sprites, draw_square
 
 
