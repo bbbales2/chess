@@ -1,6 +1,6 @@
 import sys
 import pygame
-from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_b, K_c, K_v
+from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_b, K_c, K_v, K_SPACE
 import concurrent.futures
 from board import Board
 from state import GameState
@@ -51,6 +51,8 @@ def draw():
                 state.start_ai_computation(executor, 1)
             elif event.key == K_v:
                 state.start_ai_computation(executor, -1)
+            elif event.key == K_SPACE:
+                state.execute_ai_move()
             state.reset_ui()
 
         # Mouse click
