@@ -1,13 +1,13 @@
-from typing import List, Tuple, Dict
+from typing import List, Tuple
 from board import Board, Move, Position
-
 import numpy
 
-def generate_moves(board : Board, player_sign : int):
-    if player_sign not in [1, -1]:
-        raise Exception("Player sign must be 1 or -1")
 
-    moves : List[Move] = []
+def generate_moves(board: Board, player_sign: int):
+    if player_sign not in [1, -1]:
+        raise ValueError("Player sign must be 1 or -1")
+
+    moves: List[Move] = []
 
     # Return a list (100x4) of moves for the given board state and ply
     for x in range(8):
@@ -94,6 +94,7 @@ def generate_moves(board : Board, player_sign : int):
                 raise Exception("Piece {piece} not found")
     return moves
 
+
 values = numpy.array([0.0, 100.0, 300.0, 320.0, 500.0, 900.0, 200000.0])
 
 pawn_position_bonus = numpy.array([
@@ -106,6 +107,7 @@ pawn_position_bonus = numpy.array([
     [0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0],
 ])
+
 
 def evaluate_position(board):
     # Return score of current board
@@ -122,14 +124,15 @@ def evaluate_position(board):
     
     return total_value
 
-class AIGame:
-    board : Board
-    dmax : int = 3
 
-    def __init__(self, board_ : Board):
+class AIGame:
+    board: Board
+    dmax: int = 3
+
+    def __init__(self, board_: Board):
         self.board = board_
 
-    def update_position(self, move : Move, clist : List[Move], ply : int):
+    def update_position(self, move: Move, clist: List[Move], ply: int):
         # Update the board with a new move
         previous_piece = self.board.move(move.src, move.dst)
         clist.append((move, previous_piece))
@@ -184,13 +187,13 @@ class AIGame:
         return do_prune
 
     def pick_next_move(self, active_player_sign : int):
-        moves : List[List[Move]] = self.dmax * [[]]
-        mptr : List[int] = self.dmax * [0]
-        scores : List[float] = (self.dmax + 1) * [0]
-        pc : List[List[Move]] = self.dmax * [[]]
-        clist : List[Tuple[Move, int]] = []
-        ply : int = 0
-        player_sign : int = active_player_sign
+        moves: List[List[Move]] = self.dmax * [[]]
+        mptr: List[int] = self.dmax * [0]
+        scores: List[float] = (self.dmax + 1) * [0]
+        pc: List[List[Move]] = self.dmax * [[]]
+        clist: List[Tuple[Move, int]] = []
+        ply: int = 0
+        player_sign: int = active_player_sign
 
         moves[ply] = generate_moves(self.board, player_sign)
         mptr[ply] = 0
