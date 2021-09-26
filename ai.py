@@ -102,7 +102,8 @@ def generate_moves(board: Board, player_sign: int):
                         break
                     else:
                         break
-        elif piece == 4 or piece == 5:
+        
+        if piece == 4 or piece == 5:
             for dir in file_directions:
                 for dist in range(1, 8):
                     dst = src + dist * dir
@@ -119,18 +120,23 @@ def generate_moves(board: Board, player_sign: int):
             for dir in diagonal_directions + file_directions:
                 dst = src + dir
                 if board.can_move_space(dst) or board.can_capture_space(dst, player_sign):
+                    replacement_piece = board.move(src, dst)
                     attacking_moves = find_attacking_moves(board, dst, -1 * player_sign)
+                    board.move(dst, src, replacement_piece)
                     if len(attacking_moves) == 0:
                         moves.append(Move(src, dst))
-        else:
-            raise Exception("Piece {piece} not found")
     
+    if king_position is None:
+        return moves
+
     valid_moves = []
     for move in moves:
         if move.src == king_position:
             valid_moves.append(move)
         else:
+            replacement_piece = board.move(move.src, move.dst)
             attacking_moves = find_attacking_moves(board, king_position, -1 * player_sign)
+            board.move(move.dst, move.src, replacement_piece)
             if len(attacking_moves) == 0:
                 valid_moves.append(move)
     return valid_moves
@@ -242,6 +248,8 @@ class AIGame:
 
         while True:
             if mptr[ply] == len(moves[ply]):
+                if numpy.isinf(scores[ply]):
+                    b = 1
                 prune = self.pc_update(mptr, moves, scores, pc, ply, player_sign)
 
                 if ply == 0:
@@ -254,18 +262,24 @@ class AIGame:
                     mptr[ply] += 1
             else:
                 next_move = moves[ply][mptr[ply]]
+                if next_move.dst == Position(2, 7):
+                    a = 1
                 ply = self.update_position(next_move, clist, ply)
                 if ply < self.dmax:
                     # If not at last layer, advance layer
                     moves[ply] = generate_moves(self.board, player_sign * (-1)**ply)
                     mptr[ply] = 0
-                    if ply > 1:
+                    if len(moves[ply]) == 0:
+                        scores[ply] = evaluate_position(self.board)
+                    elif ply > 1:
                         scores[ply] = scores[ply - 2]
                     else:
                         scores[ply] = player_sign * (-1)**ply * -float('inf')
                 elif ply == self.dmax:
                     # If at last layer, evaluate score
                     scores[ply] = evaluate_position(self.board)
+                    if numpy.isinf(scores[ply]):
+                        b = 1
                     prune = self.pc_update(mptr, moves, scores, pc, ply, player_sign)
                     ply = self.restore_position(clist, ply)
                     if prune:
@@ -275,4 +289,7 @@ class AIGame:
                 else:
                     raise Exception("Unhandled state")
 
-        return pc[0][0]
+        if len(pc[0]) > 0:
+            return pc[0][0]
+        else:
+            return None

@@ -7,8 +7,10 @@ from board import Board, Position
 def do_ai(board: Board, active_player_sign: int):
     ai = AIGame(board)
     move = ai.pick_next_move(active_player_sign)
-    return move.src, move.dst
-
+    if move is not None:
+        return move.src, move.dst
+    else:
+        return None
 
 class GameState:
     def __init__(self, board):
@@ -66,10 +68,8 @@ class GameState:
 
     def perform_move(self, src: Position, dst: Position):
         """Perform move from source to destination and update state, if it is source occupiers turn."""
-        player = self.check_whose_turn()
-        if player == self.board.occupying_player(src):
-            previous_piece = self.board.move(src, dst)
-            self.moves.append(((src, dst), previous_piece))
+        previous_piece = self.board.move(src, dst)
+        self.moves.append(((src, dst), previous_piece))
 
     def start_ai_computation(self, executor, player_sign):
         """Send AI computation to executor and update state."""
@@ -79,7 +79,9 @@ class GameState:
         """Check if AI is done and update state."""
         ai = self.ai
         if ai is not None and ai.done():
-            self.ai_src, self.ai_dst = ai.result()
+            result = ai.result()
+            if result is not None:
+                self.ai_src, self.ai_dst = result
             self.ai = None
 
     def get_ai_text(self):
