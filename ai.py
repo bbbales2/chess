@@ -248,8 +248,6 @@ class AIGame:
 
         while True:
             if mptr[ply] == len(moves[ply]):
-                if numpy.isinf(scores[ply]):
-                    b = 1
                 prune = self.pc_update(mptr, moves, scores, pc, ply, player_sign)
 
                 if ply == 0:
@@ -262,8 +260,6 @@ class AIGame:
                     mptr[ply] += 1
             else:
                 next_move = moves[ply][mptr[ply]]
-                if next_move.dst == Position(2, 7):
-                    a = 1
                 ply = self.update_position(next_move, clist, ply)
                 if ply < self.dmax:
                     # If not at last layer, advance layer
@@ -278,8 +274,6 @@ class AIGame:
                 elif ply == self.dmax:
                     # If at last layer, evaluate score
                     scores[ply] = evaluate_position(self.board)
-                    if numpy.isinf(scores[ply]):
-                        b = 1
                     prune = self.pc_update(mptr, moves, scores, pc, ply, player_sign)
                     ply = self.restore_position(clist, ply)
                     if prune:
