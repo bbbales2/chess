@@ -1,7 +1,54 @@
 from typing import List, Tuple
-from board import Board, Move, Position
+from board import Board, Move, Position, diagonal_directions, file_directions, knight_directions
 import numpy
 
+def find_attacking_moves(board: Board, pos: Position, player_sign: None):
+    attacking_moves = []
+    # Search for rooks/queens/kings
+    for dir in file_directions:
+        for dist in range(1, 8):
+            src = pos + dist * dir
+
+            if not board.is_valid_position(src):
+                break
+            
+            if board.occupied(src):
+                piece = abs(board[src])
+                if piece == 4 or piece == 5 or piece == 6:
+                    attacking_moves.append(Move(src, pos))
+                break
+
+    # Search for bishops/queens/kings
+    for dir in diagonal_directions:
+        for dist in range(1, 8):
+            src = pos + dist * dir
+
+            if not board.is_valid_position(src):
+                break
+
+            if board.occupied(src):
+                piece = abs(board[src])
+                if piece == 3 or piece == 5 or piece == 6:
+                    attacking_moves.append(Move(src, pos))
+                break
+    
+    # Search for horses
+    for dir in knight_directions:
+        src = pos + dir
+
+        if not board.is_valid_position(src):
+            continue
+
+        if board.occupied(src):
+            piece = abs(board[src])
+            if piece == 2:
+                attacking_moves.append(Move(src, pos))
+
+    if player_sign is not None:
+        attacking_moves = [
+            move for move in attacking_moves if board[move.src] * player_sign > 0
+        ]
+    return attacking_moves
 
 def generate_moves(board: Board, player_sign: int):
     if player_sign not in [1, -1]:
@@ -9,90 +56,90 @@ def generate_moves(board: Board, player_sign: int):
 
     moves: List[Move] = []
 
-    # Return a list (100x4) of moves for the given board state and ply
-    for x in range(8):
-        for y in range(8):
-            src = Position(x, y)
-            signed_piece = board[src]
+    # Return a list of moves for the given board state and player
+    positions = board.find_piece_positions(player_sign)
+    king_position = None
+    for src in positions:
+        signed_piece = board[src]
 
-            if signed_piece * player_sign <= 0:
-                continue
+        if signed_piece * player_sign <= 0:
+            continue
 
-            piece = abs(signed_piece)
-            if piece == 1:
-                dst = Position(x, y + player_sign)
+        piece = abs(signed_piece)
+        if piece == 1:
+            dst = Position(src.x, src.y + player_sign)
+            if board.can_move_space(dst):
+                moves.append(Move(src, dst))
+
+                dst = Position(src.x, src.y + 2 * player_sign)
+                if src.y == player_sign or (src.y - 7) == player_sign and board.can_move_space(dst):
+                    moves.append(Move(src, dst))
+
+            dst = Position(src.x + 1, src.y + player_sign)
+            if board.can_capture_space(dst, player_sign):
+                moves.append(Move(src, dst))
+
+            dst = Position(src.x - 1, src.y + player_sign)
+            if board.can_capture_space(dst, player_sign):
+                moves.append(Move(src, dst))
+        elif piece == 2:
+            for dir in knight_directions:
+                dst = src + dir
+
                 if board.can_move_space(dst):
                     moves.append(Move(src, dst))
-
-                    dst = Position(x, y + 2 * player_sign)
-                    if y == player_sign or (y - 7) == player_sign and board.can_move_space(dst):
-                        moves.append(Move(src, dst))
-
-                dst = Position(x + 1, y + player_sign)
-                if board.can_capture_space(dst, player_sign):
+                elif board.can_capture_space(dst, player_sign):
                     moves.append(Move(src, dst))
-
-                dst = Position(x - 1, y + player_sign)
-                if board.can_capture_space(dst, player_sign):
-                    moves.append(Move(src, dst))
-            elif piece == 2:
-                for dir in [
-                    Position(1, 2), Position(-1, 2),
-                    Position(2, -1), Position(2, 1),
-                    Position(1, -2), Position(-1, -2),
-                    Position(-2, -1), Position(-2, 1)
-                ]:
-                    dst = src + dir
+        elif piece == 3 or piece == 5:
+            for dir in diagonal_directions:
+                for dist in range(1, 8):
+                    dst = src + dist * dir
 
                     if board.can_move_space(dst):
                         moves.append(Move(src, dst))
                     elif board.can_capture_space(dst, player_sign):
                         moves.append(Move(src, dst))
-            elif piece == 3 or piece == 5:
-                for dir in [
-                    Position(1, 1), Position(-1, 1),
-                    Position(1, -1), Position(-1, -1)
-                ]:
-                    for dist in range(1, 8):
-                        dst = src + dist * dir
+                        break
+                    else:
+                        break
+        
+        if piece == 4 or piece == 5:
+            for dir in file_directions:
+                for dist in range(1, 8):
+                    dst = src + dist * dir
 
-                        if board.can_move_space(dst):
-                            moves.append(Move(src, dst))
-                        elif board.can_capture_space(dst, player_sign):
-                            moves.append(Move(src, dst))
-                            break
-                        else:
-                            break
-            elif piece == 4 or piece == 5:
-                for dir in [
-                    Position(1, 0), Position(-1, 0),
-                    Position(0, 1), Position(0, -1)
-                ]:
-                    for dist in range(1, 8):
-                        dst = src + dist * dir
-
-                        if board.can_move_space(dst):
-                            moves.append(Move(src, dst))
-                        elif board.can_capture_space(dst, player_sign):
-                            moves.append(Move(src, dst))
-                            break
-                        else:
-                            break
-            elif piece == 6:
-                for dir in [
-                    Position(1, 0), Position(-1, 0),
-                    Position(0, 1), Position(0, -1),
-                    Position(1, 1), Position(-1, 1),
-                    Position(1, -1), Position(-1, -1)
-                ]:
-                    dst = src + dir
                     if board.can_move_space(dst):
                         moves.append(Move(src, dst))
                     elif board.can_capture_space(dst, player_sign):
                         moves.append(Move(src, dst))
-            else:
-                raise Exception("Piece {piece} not found")
-    return moves
+                        break
+                    else:
+                        break
+        elif piece == 6:
+            king_position = src
+            for dir in diagonal_directions + file_directions:
+                dst = src + dir
+                if board.can_move_space(dst) or board.can_capture_space(dst, player_sign):
+                    replacement_piece = board.move(src, dst)
+                    attacking_moves = find_attacking_moves(board, dst, -1 * player_sign)
+                    board.move(dst, src, replacement_piece)
+                    if len(attacking_moves) == 0:
+                        moves.append(Move(src, dst))
+    
+    if king_position is None:
+        return moves
+
+    valid_moves = []
+    for move in moves:
+        if move.src == king_position:
+            valid_moves.append(move)
+        else:
+            replacement_piece = board.move(move.src, move.dst)
+            attacking_moves = find_attacking_moves(board, king_position, -1 * player_sign)
+            board.move(move.dst, move.src, replacement_piece)
+            if len(attacking_moves) == 0:
+                valid_moves.append(move)
+    return valid_moves
 
 
 values = numpy.array([0.0, 100.0, 300.0, 320.0, 500.0, 900.0, 200000.0])
@@ -218,7 +265,9 @@ class AIGame:
                     # If not at last layer, advance layer
                     moves[ply] = generate_moves(self.board, player_sign * (-1)**ply)
                     mptr[ply] = 0
-                    if ply > 1:
+                    if len(moves[ply]) == 0:
+                        scores[ply] = evaluate_position(self.board)
+                    elif ply > 1:
                         scores[ply] = scores[ply - 2]
                     else:
                         scores[ply] = player_sign * (-1)**ply * -float('inf')
@@ -234,4 +283,7 @@ class AIGame:
                 else:
                     raise Exception("Unhandled state")
 
-        return pc[0][0]
+        if len(pc[0]) > 0:
+            return pc[0][0]
+        else:
+            return None
