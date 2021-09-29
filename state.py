@@ -1,16 +1,12 @@
 import pygame
 import math
 from ai import AIGame
-from board import Board, Position
+from board import Board, Move, Unmove, Position
 
 
 def do_ai(board: Board, active_player_sign: int):
     ai = AIGame(board)
-    move = ai.pick_next_move(active_player_sign)
-    if move is not None:
-        return move.src, move.dst
-    else:
-        return None
+    return ai.pick_next_move(active_player_sign)
 
 class GameState:
     def __init__(self, board):
@@ -19,8 +15,7 @@ class GameState:
         self.hovered = None
         self.moves = []
         self.ai = None
-        self.ai_src = None
-        self.ai_dst = None
+        self.ai_move = None
         text_font = pygame.font.Font(None, 32)
         text_color = (80, 80, 180)
         self.compute_text = text_font.render("Computing...", 1, text_color)
@@ -50,16 +45,14 @@ class GameState:
     def rewind(self):
         """Undo previous move and update state."""
         if len(self.moves) > 0:
-            (src, dst), previous_piece = self.moves.pop()
-            self.board.move(dst, src, previous_piece)
-            self.ai_src = None
-            self.ai_dst = None
+            unmove = self.moves.pop()
+            self.board.unmove(unmove)
+            self.ai_move = None
 
     def reset_ui(self):
         """Reset highlighting things (except hover)."""
         self.selected = None
-        self.ai_src = None
-        self.ai_dst = None
+        self.ai_move = None
 
     def update_selected(self, pos):
         """Make position pos selected if it is occupied"""
@@ -68,8 +61,8 @@ class GameState:
 
     def perform_move(self, src: Position, dst: Position):
         """Perform move from source to destination and update state, if it is source occupiers turn."""
-        previous_piece = self.board.move(src, dst)
-        self.moves.append(((src, dst), previous_piece))
+        unmove = self.board.move(Move(src, dst))
+        self.moves.append(unmove)
 
     def start_ai_computation(self, executor, player_sign):
         """Send AI computation to executor and update state."""
@@ -81,14 +74,14 @@ class GameState:
         if ai is not None and ai.done():
             result = ai.result()
             if result is not None:
-                self.ai_src, self.ai_dst = result
+                self.ai_move = result
             self.ai = None
 
     def get_ai_text(self):
         """Get the current AI info text."""
         if self.ai is not None:
             text = self.compute_text
-        elif self.ai_src is not None:
+        elif self.ai_move is not None:
             text = self.done_text
         else:
             text = None
@@ -104,5 +97,5 @@ class GameState:
 
     def execute_ai_move(self):
         """Execute the current suggested AI move."""
-        if self.ai_src is not None:
-            self.perform_move(self.ai_src, self.ai_dst)
+        if self.ai_move is not None:
+            self.perform_move(self.ai_move)

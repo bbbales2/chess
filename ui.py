@@ -1,5 +1,5 @@
 import pygame
-from board import Position
+from board import PiecePosition, Position
 import numpy
 
 
@@ -62,11 +62,11 @@ def draw_square_background(screen, x, y, state, square_sprites, square_size):
     ai_sprite = square_sprites[0]
     hover_sprite = square_sprites[1]
     selected_sprite = square_sprites[2]
-    if state.ai_src is not None and state.ai_src.x == x and state.ai_src.y == y:
-        screen.blit(ai_sprite, (x * 60 + 1, (420 - y * 60) + 1, square_size, square_size))
 
-    if state.ai_dst is not None and state.ai_dst.x == x and state.ai_dst.y == y:
-        screen.blit(ai_sprite, (x * 60 + 1, (420 - y * 60) + 1, square_size, square_size))
+    if state.ai_move is not None:
+        for pos in [state.ai_move.src, state.ai_move.dst]:
+            if pos.x == x and pos.y == y:
+                screen.blit(ai_sprite, (x * 60 + 1, (420 - y * 60) + 1, square_size, square_size))
 
     if state.hovered is not None and state.hovered.x == x and state.hovered.y == y:
         screen.blit(hover_sprite, (x * 60 + 1, (420 - y * 60) + 1, square_size, square_size))

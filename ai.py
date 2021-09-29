@@ -1,8 +1,8 @@
 from typing import List, Tuple
-from board import Board, Move, Position, diagonal_directions, file_directions, knight_directions
+from board import Board, Move, Unmove, PiecePosition, Position, diagonal_directions, file_directions, knight_directions
 import numpy
 
-def find_attacking_moves(board: Board, pos: Position, player_sign: None):
+def find_attacking_moves(board: Board, pos: Position, player_sign):
     attacking_moves = []
     # Search for rooks/queens/kings
     for dir in file_directions:
@@ -13,7 +13,7 @@ def find_attacking_moves(board: Board, pos: Position, player_sign: None):
                 break
             
             if board.occupied(src):
-                piece = abs(board[src])
+                piece = player_sign * board[src]
                 if piece == 4 or piece == 5 or piece == 6:
                     attacking_moves.append(Move(src, pos))
                 break
@@ -27,7 +27,7 @@ def find_attacking_moves(board: Board, pos: Position, player_sign: None):
                 break
 
             if board.occupied(src):
-                piece = abs(board[src])
+                piece = player_sign * board[src]
                 if piece == 3 or piece == 5 or piece == 6:
                     attacking_moves.append(Move(src, pos))
                 break
@@ -40,14 +40,10 @@ def find_attacking_moves(board: Board, pos: Position, player_sign: None):
             continue
 
         if board.occupied(src):
-            piece = abs(board[src])
+            piece = player_sign * board[src]
             if piece == 2:
                 attacking_moves.append(Move(src, pos))
 
-    if player_sign is not None:
-        attacking_moves = [
-            move for move in attacking_moves if board[move.src] * player_sign > 0
-        ]
     return attacking_moves
 
 def generate_moves(board: Board, player_sign: int):
@@ -120,11 +116,12 @@ def generate_moves(board: Board, player_sign: int):
             for dir in diagonal_directions + file_directions:
                 dst = src + dir
                 if board.can_move_space(dst) or board.can_capture_space(dst, player_sign):
-                    replacement_piece = board.move(src, dst)
+                    move = Move(src, dst)
+                    unmove = board.move(move)
                     attacking_moves = find_attacking_moves(board, dst, -1 * player_sign)
-                    board.move(dst, src, replacement_piece)
+                    board.unmove(unmove)
                     if len(attacking_moves) == 0:
-                        moves.append(Move(src, dst))
+                        moves.append(move)
     
     if king_position is None:
         return moves
@@ -134,9 +131,9 @@ def generate_moves(board: Board, player_sign: int):
         if move.src == king_position:
             valid_moves.append(move)
         else:
-            replacement_piece = board.move(move.src, move.dst)
+            unmove = board.move(move)
             attacking_moves = find_attacking_moves(board, king_position, -1 * player_sign)
-            board.move(move.dst, move.src, replacement_piece)
+            board.unmove(unmove)
             if len(attacking_moves) == 0:
                 valid_moves.append(move)
     return valid_moves
@@ -179,16 +176,16 @@ class AIGame:
     def __init__(self, board_: Board):
         self.board = board_
 
-    def update_position(self, move: Move, clist: List[Move], ply: int):
+    def update_position(self, move: Move, clist: List[Unmove], ply: int):
         # Update the board with a new move
-        previous_piece = self.board.move(move.src, move.dst)
-        clist.append((move, previous_piece))
+        unmove = self.board.move(move)
+        clist.append(unmove)
         return ply + 1
 
-    def restore_position(self, clist : List[Move], ply : int):
+    def restore_position(self, clist : List[Unmove], ply : int):
         # Pop a board change off the clist to return the board to a previous state
-        move, previous_piece = clist.pop()
-        self.board.move(move.dst, move.src, previous_piece)
+        unmove = clist.pop()
+        self.board.unmove(unmove)
         return ply - 1
 
     def pc_update(self, mptr, moves, scores, pc, ply, player_sign):
@@ -238,7 +235,7 @@ class AIGame:
         mptr: List[int] = self.dmax * [0]
         scores: List[float] = (self.dmax + 1) * [0]
         pc: List[List[Move]] = self.dmax * [[]]
-        clist: List[Tuple[Move, int]] = []
+        clist: List[Unmove] = []
         ply: int = 0
         player_sign: int = active_player_sign
 
