@@ -46,6 +46,24 @@ def find_attacking_moves(board: Board, pos: Position, player_sign):
 
     return attacking_moves
 
+def castling_possible(board, king_position, rook_position, player_sign):
+    dir = Position(-1 if king_position.x > rook_position.x else 1, 0)
+    for dist in range(1, abs(rook_position.x - king_position.x)):
+        middle_position = king_position + dist * dir
+        if board[middle_position] != 0:
+            return False
+
+        if dist < 3:
+            attacking_moves = find_attacking_moves(board, middle_position, -1 * player_sign)
+
+            if len(attacking_moves) != 0:
+                return False
+
+    if not board.has_moved(king_position) and not board.has_moved(rook_position):
+        return True
+    else:
+        return False
+
 def generate_moves(board: Board, player_sign: int):
     if player_sign not in [1, -1]:
         raise ValueError("Player sign must be 1 or -1")
@@ -53,6 +71,8 @@ def generate_moves(board: Board, player_sign: int):
     moves: List[Move] = []
 
     # Return a list of moves for the given board state and player
+    home_row = 0 if player_sign == 1 else 7
+
     positions = board.find_piece_positions(player_sign)
     king_position = None
     for src in positions:
@@ -68,7 +88,7 @@ def generate_moves(board: Board, player_sign: int):
                 moves.append(Move(src, dst))
 
                 dst = Position(src.x, src.y + 2 * player_sign)
-                if src.y == player_sign or (src.y - 7) == player_sign and board.can_move_space(dst):
+                if src.y == home_row + player_sign and board.can_move_space(dst):
                     moves.append(Move(src, dst))
 
             dst = Position(src.x + 1, src.y + player_sign)
@@ -122,6 +142,15 @@ def generate_moves(board: Board, player_sign: int):
                     board.unmove(unmove)
                     if len(attacking_moves) == 0:
                         moves.append(move)
+
+            if src == Position(4, home_row):
+                dst = Position(6, home_row)
+                if castling_possible(board, src, Position(7, home_row), player_sign):
+                    moves.append(Move(src, dst))
+
+                dst = Position(2, home_row)
+                if castling_possible(board, src, Position(0, home_row), player_sign):
+                    moves.append(Move(src, dst))
     
     if king_position is None:
         return moves
