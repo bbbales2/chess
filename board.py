@@ -144,6 +144,9 @@ class Board:
         removes = []
         adds = []
 
+        has_moved_copy = copy.deepcopy(self._has_moved)
+        en_passant_pos_copy = self.en_passant_pos
+
         def record_move(src, dst):
             piece = self[src]
             removes.append(PiecePosition(piece, dst))
@@ -153,8 +156,17 @@ class Board:
             self[src] = 0
         
         record_move(move.src, move.dst)
-
-        has_moved_copy = copy.deepcopy(self._has_moved)
+        if abs(piece) == 1:
+            if self.en_passant_pos == Position(move.dst.x, move.src.y):
+                adds.append(PiecePosition(self[self.en_passant_pos], self.en_passant_pos))
+                self[self.en_passant_pos] = 0
+            
+            self.en_passant_pos = None
+            
+            if abs(move.src.y - move.dst.y) == 2:
+                self.en_passant_pos = move.dst
+        else:
+            self.en_passant_pos = None
 
         # If a king, deal with castling logic
         if abs(piece) == 6:
@@ -170,7 +182,7 @@ class Board:
                         record_move(rook_position, Position(5, side))
 
         self._has_moved.add(move.src)
-        unmove = Unmove(removes, adds, self.en_passant_pos, has_moved_copy)
+        unmove = Unmove(removes, adds, en_passant_pos_copy, has_moved_copy)
 
         return unmove
 

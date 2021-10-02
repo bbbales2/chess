@@ -98,6 +98,11 @@ def generate_moves(board: Board, player_sign: int):
             dst = Position(src.x - 1, src.y + player_sign)
             if board.can_capture_space(dst, player_sign):
                 moves.append(Move(src, dst))
+            
+            for side in [-1, 1]:
+                if board.en_passant_pos == Position(src.x + side, src.y):
+                    moves.append(Move(src, Position(src.x + side, src.y + player_sign)))
+
         elif piece == 2:
             for dir in knight_directions:
                 dst = src + dir
