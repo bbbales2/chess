@@ -19,16 +19,19 @@ def create_background(screen):
 
 def create_square_sprites(size: int):
     square_size = (size, size)
+    square_size_small = (int(size / 2), int(size / 2))
     hover_color = (240, 80, 80)
     select_color = (240, 240, 80)
     ai_highlight_color = (80, 80, 180)
     hover_sprite = pygame.Surface(square_size)
     hover_sprite.fill(hover_color)
+    hover_sprite_small = pygame.Surface(square_size_small)
+    hover_sprite_small.fill(hover_color)
     selected_sprite = pygame.Surface(square_size)
     selected_sprite.fill(select_color)
     ai_sprite = pygame.Surface(square_size)
     ai_sprite.fill(ai_highlight_color)
-    return ai_sprite, hover_sprite, selected_sprite
+    return ai_sprite, hover_sprite, hover_sprite_small, selected_sprite
 
 
 def piece_sprite(col, typ, size: int):
@@ -38,21 +41,33 @@ def piece_sprite(col, typ, size: int):
 
 def create_piece_sprites(size: int):
     piece_sprites = {
-        1: {
-            1: piece_sprite("w", "pawn", size),
-            2: piece_sprite("w", "knight", size),
-            3: piece_sprite("w", "bishop", size),
-            4: piece_sprite("w", "rook", size),
-            5: piece_sprite("w", "queen", size),
-            6: piece_sprite("w", "king", size),
+        "regular" : {
+            1: {
+                1: piece_sprite("w", "pawn", size),
+                2: piece_sprite("w", "knight", size),
+                3: piece_sprite("w", "bishop", size),
+                4: piece_sprite("w", "rook", size),
+                5: piece_sprite("w", "queen", size),
+                6: piece_sprite("w", "king", size),
+            },
+            -1: {
+                1: piece_sprite("b", "pawn", size),
+                2: piece_sprite("b", "knight", size),
+                3: piece_sprite("b", "bishop", size),
+                4: piece_sprite("b", "rook", size),
+                5: piece_sprite("b", "queen", size),
+                6: piece_sprite("b", "king", size),
+            }
         },
-        -1: {
-            1: piece_sprite("b", "pawn", size),
-            2: piece_sprite("b", "knight", size),
-            3: piece_sprite("b", "bishop", size),
-            4: piece_sprite("b", "rook", size),
-            5: piece_sprite("b", "queen", size),
-            6: piece_sprite("b", "king", size),
+        "small" : {
+            1: {
+                2: piece_sprite("w", "knight", int(size / 2)),
+                5: piece_sprite("w", "queen", int(size / 2)),
+            },
+            -1: {
+                2: piece_sprite("b", "knight", int(size / 2)),
+                5: piece_sprite("b", "queen", int(size / 2)),
+            }
         }
     }
     return piece_sprites
@@ -61,7 +76,8 @@ def create_piece_sprites(size: int):
 def draw_square_background(screen, x, y, state, square_sprites, square_size):
     ai_sprite = square_sprites[0]
     hover_sprite = square_sprites[1]
-    selected_sprite = square_sprites[2]
+    hover_sprite_small = square_sprites[2]
+    selected_sprite = square_sprites[3]
 
     if state.ai_move is not None:
         for pos in [state.ai_move.src, state.ai_move.dst]:
@@ -69,7 +85,19 @@ def draw_square_background(screen, x, y, state, square_sprites, square_size):
                 screen.blit(ai_sprite, (x * 60 + 1, (420 - y * 60) + 1, square_size, square_size))
 
     if state.hovered is not None and state.hovered.x == x and state.hovered.y == y:
-        screen.blit(hover_sprite, (x * 60 + 1, (420 - y * 60) + 1, square_size, square_size))
+        if state.selected is not None:
+            signed_selected_piece = state.board[state.selected]
+        else:
+            signed_selected_piece = 0
+
+        if abs(signed_selected_piece) == 1 and y in [0, 7]:
+            if state.hovered_left:
+                x_offset = 0
+            else:
+                x_offset = 29
+            screen.blit(hover_sprite_small, (x * 60 + 1 + x_offset, (435 - y * 60) + 1, int(square_size / 2), int(square_size / 2)))
+        else:
+            screen.blit(hover_sprite, (x * 60 + 1, (420 - y * 60) + 1, square_size, square_size))
 
     if state.selected is not None and state.selected.x == x and state.selected.y == y:
         screen.blit(selected_sprite, (x * 60 + 1, (420 - y * 60) + 1, square_size, square_size))
@@ -79,22 +107,41 @@ def draw_board(screen, background, state, piece_sprites, square_sprites, square_
     screen.blit(background, (0, 0))
     for x in range(8):
         for y in range(8):
-
             # Draw square background
             draw_square_background(screen, x, y, state, square_sprites, square_size)
 
             # Draw piece
             pos = Position(x, y)
-            signed_piece = state.board[pos]
-            piece = abs(signed_piece)
-            player_sign = numpy.sign(signed_piece)
-            if piece == 0:
-                continue
-            sprite = piece_sprites[player_sign][piece]
-            centerx = 30 + x * 60
-            centery = 480 - 30 - y * 60
-            pos = sprite.get_rect(centerx=centerx, centery=centery)
-            screen.blit(sprite, pos)
+            if state.selected is not None:
+                signed_selected_piece = state.board[state.selected]
+            else:
+                signed_selected_piece = 0
+
+            if pos == state.hovered and abs(signed_selected_piece) == 1 and pos.y in [0, 7]:
+                player_sign = numpy.sign(signed_selected_piece)
+
+                sprite = piece_sprites["small"][player_sign][2]
+                centerx = 15 + x * 60
+                centery = 480 - 30 - y * 60
+                pos = sprite.get_rect(centerx=centerx, centery=centery)
+                screen.blit(sprite, pos)
+
+                sprite = piece_sprites["small"][player_sign][5]
+                centerx = 45 + x * 60
+                centery = 480 - 30 - y * 60
+                pos = sprite.get_rect(centerx=centerx, centery=centery)
+                screen.blit(sprite, pos)
+            else:
+                signed_piece = state.board[pos]
+                piece = abs(signed_piece)
+                player_sign = numpy.sign(signed_piece)
+                if piece == 0:
+                    continue
+                sprite = piece_sprites["regular"][player_sign][piece]
+                centerx = 30 + x * 60
+                centery = 480 - 30 - y * 60
+                pos = sprite.get_rect(centerx=centerx, centery=centery)
+                screen.blit(sprite, pos)
 
             # Draw the AI info text
             text = state.get_ai_text()

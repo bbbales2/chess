@@ -44,6 +44,10 @@ class Move:
     src: Position
     dst: Position
 
+@dataclass(frozen=True)
+class PromotionMove(Move):
+    promoted_piece: int
+
 @dataclass(frozen = True)
 class Unmove:
     removes: List[PiecePosition]
@@ -137,6 +141,7 @@ class Board:
 
     def move(self, move: Move):
         piece = self[move.src]
+        player_sign = numpy.sign(piece)
 
         if piece == 0:
             raise Exception(f"No piece to move with {move}")
@@ -154,33 +159,38 @@ class Board:
             adds.append(PiecePosition(self[dst], dst))
             self[dst] = piece
             self[src] = 0
-        
+
+        next_en_passant_pos = None
+
         record_move(move.src, move.dst)
-        if abs(piece) == 1:
-            if self.en_passant_pos == Position(move.dst.x, move.src.y):
-                adds.append(PiecePosition(self[self.en_passant_pos], self.en_passant_pos))
-                self[self.en_passant_pos] = 0
-            
-            self.en_passant_pos = None
-            
-            if abs(move.src.y - move.dst.y) == 2:
-                self.en_passant_pos = move.dst
+
+        if isinstance(move, PromotionMove):
+            removes.append(PiecePosition(move.promoted_piece, move.dst))
+            self[move.dst] = move.promoted_piece
+            self[move.src] = 0
         else:
-            self.en_passant_pos = None
+            if abs(piece) == 1:
+                if self.en_passant_pos == Position(move.dst.x, move.src.y):
+                    adds.append(PiecePosition(self[self.en_passant_pos], self.en_passant_pos))
+                    self[self.en_passant_pos] = 0
+                
+                if abs(move.src.y - move.dst.y) == 2:
+                    next_en_passant_pos = move.dst
 
-        # If a king, deal with castling logic
-        if abs(piece) == 6:
-            for side in [0, 7]:
-                if move.src == Position(4, side):
-                    if move.dst == Position(2, side):
-                        rook_position = Position(0, side)
-                        self._has_moved.add(rook_position)
-                        record_move(rook_position, Position(3, side))
-                    elif move.dst == Position(6, side):
-                        rook_position = Position(7, side)
-                        self._has_moved.add(rook_position)
-                        record_move(rook_position, Position(5, side))
+            # If a king, deal with castling logic
+            if abs(piece) == 6:
+                for side in [0, 7]:
+                    if move.src == Position(4, side):
+                        if move.dst == Position(2, side):
+                            rook_position = Position(0, side)
+                            self._has_moved.add(rook_position)
+                            record_move(rook_position, Position(3, side))
+                        elif move.dst == Position(6, side):
+                            rook_position = Position(7, side)
+                            self._has_moved.add(rook_position)
+                            record_move(rook_position, Position(5, side))
 
+        self.en_passant_pos = next_en_passant_pos
         self._has_moved.add(move.src)
         unmove = Unmove(removes, adds, en_passant_pos_copy, has_moved_copy)
 

@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from board import Board, Move, Unmove, PiecePosition, Position, diagonal_directions, file_directions, knight_directions
+from board import Board, PromotionMove, Move, Unmove, Position, diagonal_directions, file_directions, knight_directions
 import numpy
 
 def find_attacking_moves(board: Board, pos: Position, player_sign):
@@ -84,24 +84,28 @@ def generate_moves(board: Board, player_sign: int):
         piece = abs(signed_piece)
         if piece == 1:
             dst = Position(src.x, src.y + player_sign)
+
+            def promote_move_if_possible(src, dst):
+                if dst.y in [0, 7]:
+                    moves.append(PromotionMove(src, dst, player_sign * 2))
+                    moves.append(PromotionMove(src, dst, player_sign * 5))
+                else:
+                    moves.append(Move(src, dst))
+
             if board.can_move_space(dst):
-                moves.append(Move(src, dst))
+                promote_move_if_possible(src, dst)
 
                 dst = Position(src.x, src.y + 2 * player_sign)
                 if src.y == home_row + player_sign and board.can_move_space(dst):
                     moves.append(Move(src, dst))
 
-            dst = Position(src.x + 1, src.y + player_sign)
-            if board.can_capture_space(dst, player_sign):
-                moves.append(Move(src, dst))
-
-            dst = Position(src.x - 1, src.y + player_sign)
-            if board.can_capture_space(dst, player_sign):
-                moves.append(Move(src, dst))
-            
             for side in [-1, 1]:
-                if board.en_passant_pos == Position(src.x + side, src.y):
-                    moves.append(Move(src, Position(src.x + side, src.y + player_sign)))
+                dst = Position(src.x + side, src.y + player_sign)
+                if (
+                    board.can_capture_space(dst, player_sign) or
+                    board.en_passant_pos == Position(src.x + side, src.y)
+                ):
+                    promote_move_if_possible(src, dst)
 
         elif piece == 2:
             for dir in knight_directions:
