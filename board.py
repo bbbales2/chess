@@ -60,7 +60,7 @@ class Board:
     # en_passant_pos stores the en passant position
     # so for e2e4, the en_passant_pos would be e3
     en_passant_pos: Position = None
-    _has_moved: Set[Position] = 0
+    _has_moved: int = 0
     pos_bit: Dict[Position, int] = {}
 
     def __init__(self):
