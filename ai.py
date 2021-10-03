@@ -264,6 +264,7 @@ def evaluate_position(board):
 class AIGame:
     board: Board
     dmax: int = 5
+    killer_move_count: int = 2
 
     def __init__(self, board_: Board):
         self.board = board_
@@ -362,7 +363,7 @@ class AIGame:
 
                     ply = self.restore_position(clist, ply)
                     if prune:
-                        if len(killer_moves[ply]) >= 2:
+                        if len(killer_moves[ply]) >= self.killer_move_count:
                             killer_moves[ply].popleft()
                         killer_moves[ply].append(moves[ply][mptr[ply]])
                         mptr[ply] = len(moves[ply]) # skip the rest of the moves
@@ -387,7 +388,7 @@ class AIGame:
                         prune = self.pc_update(mptr, moves, scores, pc, ply, player_sign)
                         ply = self.restore_position(clist, ply)
                         if prune:
-                            if len(killer_moves[ply]) >= 2:
+                            if len(killer_moves[ply]) >= self.killer_move_count:
                                 killer_moves[ply].popleft()
                             killer_moves[ply].append(next_move)
                             mptr[ply] = len(moves[ply]) # skip the rest of the moves
