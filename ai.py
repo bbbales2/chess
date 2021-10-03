@@ -264,12 +264,9 @@ def evaluate_position(board):
 class AIGame:
     board: Board
     dmax: int = 5
-    moves_at_ply: List[int]
 
     def __init__(self, board_: Board):
         self.board = board_
-
-        self.moves_at_ply = [100, 100, 100] + max(0, self.dmax - 3) * [3]
 
     def update_position(self, move: Move, clist: List[Unmove], ply: int):
         # Update the board with a new move
