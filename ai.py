@@ -151,6 +151,8 @@ def castling_possible(board, king_position, rook_position, player_sign):
 def promote_move_if_possible(moves, src, dst, player_sign):
     if dst.y in [0, 7]:
         moves.append(PromotionMove(src, dst, player_sign * 2))
+        moves.append(PromotionMove(src, dst, player_sign * 3))
+        moves.append(PromotionMove(src, dst, player_sign * 4))
         moves.append(PromotionMove(src, dst, player_sign * 5))
     else:
         moves.append(Move(src, dst))
