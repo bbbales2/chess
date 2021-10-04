@@ -4,7 +4,17 @@ from board import Board, PromotionMove, Move, Unmove, Position, diagonal_directi
 import numpy
 
 def find_any_attacking_move(board: Board, pos: Position, player_sign):
-    # Search for rooks/queens/kings
+    # Search for pawns
+    for side in [-1, 1]:
+        src = pos + Position(side, -player_sign)
+
+        if not board.is_valid_position(src):
+            continue
+
+        if board[src] == player_sign * 1:
+            return Move(src, pos)
+
+    # Search for rooks/queens
     for dir in file_directions:
         for dist in range(1, 8):
             src = pos + dist * dir
@@ -14,11 +24,11 @@ def find_any_attacking_move(board: Board, pos: Position, player_sign):
             
             if board.occupied(src):
                 piece = player_sign * board[src]
-                if piece in [4, 5, 6]:
+                if piece in [4, 5]:
                     return Move(src, pos)
                 break
 
-    # Search for bishops/queens/kings
+    # Search for bishops/queens
     for dir in diagonal_directions:
         for dist in range(1, 8):
             src = pos + dist * dir
@@ -28,7 +38,7 @@ def find_any_attacking_move(board: Board, pos: Position, player_sign):
 
             if board.occupied(src):
                 piece = player_sign * board[src]
-                if piece in [3, 5, 6]:
+                if piece in [3, 5]:
                     return Move(src, pos)
                 break
     
@@ -42,11 +52,31 @@ def find_any_attacking_move(board: Board, pos: Position, player_sign):
         if player_sign * board[src] == 2:
             return Move(src, pos)
 
+    # Search for kings
+    for dir in file_directions + diagonal_directions:
+        src = pos + dir
+
+        if not board.is_valid_position(src):
+            continue
+            
+        if board[src] == player_sign * 6:
+            return Move(src, pos)
+    
     return None
 
-def find_attacking_moves(board: Board, pos: Position, player_sign):
+def find_all_possible_attacks(board: Board, pos: Position, player_sign):
     attacking_moves = []
-    # Search for rooks/queens/kings
+    # Search for pawns
+    for side in [-1, 1]:
+        src = pos + Position(side, -player_sign)
+
+        if not board.is_valid_position(src):
+            continue
+
+        if board[src] == player_sign * 1:
+            attacking_moves.append(Move(src, pos))
+
+    # Search for rooks/queens
     for dir in file_directions:
         for dist in range(1, 8):
             src = pos + dist * dir
@@ -55,12 +85,14 @@ def find_attacking_moves(board: Board, pos: Position, player_sign):
                 break
             
             if board.occupied(src):
-                piece = player_sign * board[src]
-                if piece == 4 or piece == 5 or piece == 6:
-                    attacking_moves.append(Move(src, pos))
-                break
+                piece = board[src]
+                if player_sign == numpy.sign(piece):
+                    if abs(piece) in [4, 5]:
+                        attacking_moves.append(Move(src, pos))
+                    else:
+                        break
 
-    # Search for bishops/queens/kings
+    # Search for bishops/queens
     for dir in diagonal_directions:
         for dist in range(1, 8):
             src = pos + dist * dir
@@ -70,9 +102,11 @@ def find_attacking_moves(board: Board, pos: Position, player_sign):
 
             if board.occupied(src):
                 piece = player_sign * board[src]
-                if piece == 3 or piece == 5 or piece == 6:
-                    attacking_moves.append(Move(src, pos))
-                break
+                if player_sign == numpy.sign(piece):
+                    if abs(piece) in [3, 5]:
+                        attacking_moves.append(Move(src, pos))
+                    else:
+                        break
     
     # Search for horses
     for dir in knight_directions:
@@ -82,9 +116,19 @@ def find_attacking_moves(board: Board, pos: Position, player_sign):
             continue
 
         if board.occupied(src):
-            piece = player_sign * board[src]
-            if piece == 2:
+            piece = board[src]
+            if player_sign == numpy.sign(piece) and abs(piece) == 2:
                 attacking_moves.append(Move(src, pos))
+
+    # Search for kings
+    for dir in file_directions + diagonal_directions:
+        src = pos + dir
+
+        if not board.is_valid_position(src):
+            continue
+        
+        if board[src] == player_sign * 6:
+            attacking_moves.append(Move(src, pos))
 
     return attacking_moves
 
@@ -202,15 +246,44 @@ def generate_moves(board: Board, player_sign: int, killer_moves: deque):
     
     valid_moves = []
     scores = []
+    attack_moves = find_all_possible_attacks(board, king_position, -1 * player_sign)
     for move in moves:
         unmove = board.move(move)
         if move.src == king_position or king_position is None:
             valid_move = True
         else:
-            if find_any_attacking_move(board, king_position, -1 * player_sign) is None:
-                valid_move = True
-            else:
-                valid_move = False
+            valid_move = True
+            for attack_move in attack_moves:
+                attacking_piece = board[attack_move.src]
+
+                if abs(attacking_piece) in [1, 2]:
+                    valid_move = False
+                else:
+                    if abs(attacking_piece) in [3, 5]:
+                        offset = attack_move.dst - attack_move.src
+
+                        dir = Position(1 if offset.x > 0 else -1, 1 if offset.y > 0 else -1)
+                        distance = offset.x
+                    elif abs(attacking_piece) in [4, 5]:
+                        offset = attack_move.dst - attack_move.src
+
+                        if offset.x == 0:
+                            dir = Position(0, 1 if offset.y > 0 else -1)
+                            distance = abs(offset.y)
+                        else:
+                            dir = Position(1 if offset.x > 0 else -1, 0)
+                            distance = abs(offset.x)
+
+                    for dist in range(1, distance):
+                        midpoint = attack_move.src + dist * dir
+
+                        if board.occupied(midpoint):
+                            valid_move = False
+                            break
+                
+                if not valid_move:
+                    break
+
         if valid_move:
             valid_moves.append(move)
             score = 0
