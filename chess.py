@@ -66,9 +66,15 @@ def draw():
                     player_sign = numpy.sign(signed_piece)
                     if abs(signed_piece) == 1 and pos.y in [0, 7]:
                         if state.hovered_left:
-                            promoted_piece = player_sign * 2
+                            if state.hovered_top:
+                                promoted_piece = player_sign * 2
+                            else:
+                                promoted_piece = player_sign * 4
                         else:
-                            promoted_piece = player_sign * 5
+                            if state.hovered_top:
+                                promoted_piece = player_sign * 3
+                            else:
+                                promoted_piece = player_sign * 5
                         move = PromotionMove(state.selected, pos, promoted_piece)
                     else:
                         move = Move(state.selected, pos)

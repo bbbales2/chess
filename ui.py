@@ -62,10 +62,14 @@ def create_piece_sprites(size: int):
         "small" : {
             1: {
                 2: piece_sprite("w", "knight", int(size / 2)),
+                3: piece_sprite("w", "bishop", int(size / 2)),
+                4: piece_sprite("w", "rook", int(size / 2)),
                 5: piece_sprite("w", "queen", int(size / 2)),
             },
             -1: {
                 2: piece_sprite("b", "knight", int(size / 2)),
+                3: piece_sprite("b", "bishop", int(size / 2)),
+                4: piece_sprite("b", "rook", int(size / 2)),
                 5: piece_sprite("b", "queen", int(size / 2)),
             }
         }
@@ -95,7 +99,11 @@ def draw_square_background(screen, x, y, state, square_sprites, square_size):
                 x_offset = 0
             else:
                 x_offset = 29
-            screen.blit(hover_sprite_small, (x * 60 + 1 + x_offset, (435 - y * 60) + 1, int(square_size / 2), int(square_size / 2)))
+            if state.hovered_top:
+                y_offset = 0
+            else:
+                y_offset = 29
+            screen.blit(hover_sprite_small, (x * 60 + 1 + x_offset, (420 - y * 60) + 1 + y_offset, int(square_size / 2), int(square_size / 2)))
         else:
             screen.blit(hover_sprite, (x * 60 + 1, (420 - y * 60) + 1, square_size, square_size))
 
@@ -122,13 +130,25 @@ def draw_board(screen, background, state, piece_sprites, square_sprites, square_
 
                 sprite = piece_sprites["small"][player_sign][2]
                 centerx = 15 + x * 60
-                centery = 480 - 30 - y * 60
+                centery = 480 - 45 - y * 60
+                pos = sprite.get_rect(centerx=centerx, centery=centery)
+                screen.blit(sprite, pos)
+
+                sprite = piece_sprites["small"][player_sign][3]
+                centerx = 45 + x * 60
+                centery = 480 - 45 - y * 60
+                pos = sprite.get_rect(centerx=centerx, centery=centery)
+                screen.blit(sprite, pos)
+
+                sprite = piece_sprites["small"][player_sign][4]
+                centerx = 15 + x * 60
+                centery = 480 - 15 - y * 60
                 pos = sprite.get_rect(centerx=centerx, centery=centery)
                 screen.blit(sprite, pos)
 
                 sprite = piece_sprites["small"][player_sign][5]
                 centerx = 45 + x * 60
-                centery = 480 - 30 - y * 60
+                centery = 480 - 15 - y * 60
                 pos = sprite.get_rect(centerx=centerx, centery=centery)
                 screen.blit(sprite, pos)
             else:
