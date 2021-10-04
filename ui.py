@@ -5,7 +5,7 @@ import numpy
 
 def create_background(screen):
     background = pygame.Surface(screen.get_size()).convert()
-    background.fill((120, 120, 120))
+    background.fill((100, 100, 100))
     colors = [(80, 80, 80), (160, 160, 160)]
     for x in range(8):
         for y in range(8):
@@ -20,9 +20,9 @@ def create_background(screen):
 def create_square_sprites(size: int):
     square_size = (size, size)
     square_size_small = (int(size / 2), int(size / 2))
-    hover_color = (240, 80, 80)
-    select_color = (240, 240, 80)
-    ai_highlight_color = (80, 80, 180)
+    hover_color = (235, 85, 85)
+    select_color = (235, 235, 85)
+    ai_highlight_color = (75, 105, 200)
     hover_sprite = pygame.Surface(square_size)
     hover_sprite.fill(hover_color)
     hover_sprite_small = pygame.Surface(square_size_small)
@@ -41,7 +41,7 @@ def piece_sprite(col, typ, size: int):
 
 def create_piece_sprites(size: int):
     piece_sprites = {
-        "regular" : {
+        "regular": {
             1: {
                 1: piece_sprite("w", "pawn", size),
                 2: piece_sprite("w", "knight", size),
@@ -59,7 +59,7 @@ def create_piece_sprites(size: int):
                 6: piece_sprite("b", "king", size),
             }
         },
-        "small" : {
+        "small": {
             1: {
                 2: piece_sprite("w", "knight", int(size / 2)),
                 3: piece_sprite("w", "bishop", int(size / 2)),

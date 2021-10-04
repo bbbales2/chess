@@ -14,13 +14,15 @@ class GameState:
         self.board = board
         self.selected = None
         self.hovered = None
+        self.hovered_left = 1
+        self.hovered_top = 2
         self.moves = []
         self.ai = None
         self.ai_move = None
         text_font = pygame.font.Font(None, 32)
-        text_color = (80, 80, 180)
-        self.compute_text = text_font.render("Computing...", 1, text_color)
-        self.done_text = text_font.render("Done! (press SPACE)", 1, text_color)
+        ai_text_color = (60, 70, 200)
+        self.compute_text = text_font.render("Computing...", 1, ai_text_color)
+        self.done_text = text_font.render("Done! (press SPACE)", 1, ai_text_color)
         self.black_turn_text = text_font.render("Black to move.", 1, (5, 5, 5))
         self.white_turn_text = text_font.render("White to move.", 1, (250, 250, 250))
 
