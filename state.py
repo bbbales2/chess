@@ -36,6 +36,8 @@ class GameState:
         x = math.floor(screen_x / 60)
         y = math.floor((480 - screen_y) / 60)
         pos = Position(x, y)
+        self.hovered_left = int(screen_x / 30) % 2 == 0
+        self.hovered_top = int(screen_y / 30) % 2 == 0
         if x < 8 and y < 8:
             self.hovered = pos
         else:
