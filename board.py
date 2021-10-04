@@ -10,6 +10,9 @@ class Position:
 
     def __add__(self, other):
         return Position(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other):
+        return Position(self.x - other.x, self.y - other.y)
     
     def __mul__(self, other):
         return Position(self.x * other, self.y * other)
@@ -44,19 +47,24 @@ class Move:
     src: Position
     dst: Position
 
+@dataclass(frozen=True)
+class PromotionMove(Move):
+    promoted_piece: int
+
 @dataclass(frozen = True)
 class Unmove:
     removes: List[PiecePosition]
     adds: List[PiecePosition]
     en_passant_pos: Position
-    has_moved: Set[Position]
+    has_moved: int
 
 class Board:
     board: numpy.array = numpy.zeros([8, 8]).astype(int)
     # en_passant_pos stores the en passant position
     # so for e2e4, the en_passant_pos would be e3
     en_passant_pos: Position = None
-    _has_moved: Set[Position] = set()
+    _has_moved: int = 0
+    pos_bit: Dict[Position, int] = {}
 
     def __init__(self):
         self.reset()
@@ -75,16 +83,23 @@ class Board:
 
         self.board = board
         self.en_passant_pos = None
-        self._has_moved = set()
+        self._has_moved = 0
+
+        for y in range(0, 8):
+            for x in range(0, 8):
+                self.pos_bit[Position(x, y)] = 1 << (y * 8 + x)
     
     def is_valid_position(self, pos : Position):
-        x = pos.x
-        y = pos.y
-
-        if not (y < 0 or y >= self.board.shape[0] or x < 0 or x >= self.board.shape[1]):
-            return True
-        else:
+        if pos.y < 0:
             return False
+        elif pos.x < 0:
+            return False
+        elif pos.y >= self.board.shape[0]:
+            return False
+        elif pos.x >= self.board.shape[1]:
+            return False
+
+        return True
 
     def find_piece_positions(self, player_sign = None):
         ys, xs = numpy.where(self.board * player_sign > 0)
@@ -95,10 +110,7 @@ class Board:
         return positions
 
     def has_moved(self, pos):
-        if pos in self._has_moved:
-            return True
-        else:
-            return False
+        return self._has_moved & self.pos_bit[pos] > 0
 
     def can_move_space(self, pos):
         if self.is_valid_position(pos):
@@ -117,14 +129,14 @@ class Board:
         return False
     
     def __getitem__(self, pos: Position):
-        if not self.is_valid_position(pos):
-            raise Exception(f"{pos} is not a valid position")
+        #if not self.is_valid_position(pos):
+        #    raise Exception(f"{pos} is not a valid position")
 
         return self.board[pos.y, pos.x]
     
     def __setitem__(self, pos: Position, val):
-        if not self.is_valid_position(pos):
-            raise Exception(f"{pos} is not a valid position")
+        #if not self.is_valid_position(pos):
+        #    raise Exception(f"{pos} is not a valid position")
 
         self.board[pos.y, pos.x] = val
     
@@ -144,7 +156,7 @@ class Board:
         removes = []
         adds = []
 
-        has_moved_copy = copy.deepcopy(self._has_moved)
+        has_moved_copy = self._has_moved
         en_passant_pos_copy = self.en_passant_pos
 
         def record_move(src, dst):
@@ -154,34 +166,38 @@ class Board:
             adds.append(PiecePosition(self[dst], dst))
             self[dst] = piece
             self[src] = 0
-        
+
+        next_en_passant_pos = None
+
         record_move(move.src, move.dst)
-        if abs(piece) == 1:
-            if self.en_passant_pos == Position(move.dst.x, move.src.y):
-                adds.append(PiecePosition(self[self.en_passant_pos], self.en_passant_pos))
-                self[self.en_passant_pos] = 0
-            
-            self.en_passant_pos = None
-            
-            if abs(move.src.y - move.dst.y) == 2:
-                self.en_passant_pos = move.dst
+
+        if isinstance(move, PromotionMove):
+            removes.append(PiecePosition(move.promoted_piece, move.dst))
+            self[move.dst] = move.promoted_piece
+            self[move.src] = 0
         else:
-            self.en_passant_pos = None
+            if abs(piece) == 1:
+                if abs(move.src.y - move.dst.y) == 2:
+                    next_en_passant_pos = move.dst
+                else:
+                    if self.en_passant_pos == Position(move.dst.x, move.src.y):
+                        adds.append(PiecePosition(self[self.en_passant_pos], self.en_passant_pos))
+                        self[self.en_passant_pos] = 0
+            elif abs(piece) == 6:
+            # If a king, deal with castling logic
+                for side in [0, 7]:
+                    if move.src == Position(4, side):
+                        if move.dst == Position(2, side):
+                            rook_position = Position(0, side)
+                            self._has_moved = self._has_moved | self.pos_bit[rook_position]
+                            record_move(rook_position, Position(3, side))
+                        elif move.dst == Position(6, side):
+                            rook_position = Position(7, side)
+                            self._has_moved = self._has_moved | self.pos_bit[rook_position]
+                            record_move(rook_position, Position(5, side))
 
-        # If a king, deal with castling logic
-        if abs(piece) == 6:
-            for side in [0, 7]:
-                if move.src == Position(4, side):
-                    if move.dst == Position(2, side):
-                        rook_position = Position(0, side)
-                        self._has_moved.add(rook_position)
-                        record_move(rook_position, Position(3, side))
-                    elif move.dst == Position(6, side):
-                        rook_position = Position(7, side)
-                        self._has_moved.add(rook_position)
-                        record_move(rook_position, Position(5, side))
-
-        self._has_moved.add(move.src)
+        self.en_passant_pos = next_en_passant_pos
+        self._has_moved = self._has_moved | self.pos_bit[move.src]
         unmove = Unmove(removes, adds, en_passant_pos_copy, has_moved_copy)
 
         return unmove
@@ -190,7 +206,6 @@ class Board:
         # Update the board with a new move
         for pp in move.removes:
             self[pp.pos] = 0
-            self._has_moved.add(pp.pos)
 
         for pp in move.adds:
             self[pp.pos] = pp.piece

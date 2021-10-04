@@ -1,8 +1,9 @@
 import sys
 import pygame
 from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_b, K_c, K_v, K_SPACE
+import numpy
 import concurrent.futures
-from board import Board, Move
+from board import Board, Move, PromotionMove
 from state import GameState
 from ui import create_background, create_piece_sprites, create_square_sprites, draw_board
 
@@ -61,7 +62,23 @@ def draw():
                 if state.selected is None:
                     state.update_selected(pos)
                 else:
-                    state.perform_move(Move(state.selected, pos))
+                    signed_piece = state.board[state.selected]
+                    player_sign = numpy.sign(signed_piece)
+                    if abs(signed_piece) == 1 and pos.y in [0, 7]:
+                        if state.hovered_left:
+                            if state.hovered_top:
+                                promoted_piece = player_sign * 2
+                            else:
+                                promoted_piece = player_sign * 4
+                        else:
+                            if state.hovered_top:
+                                promoted_piece = player_sign * 3
+                            else:
+                                promoted_piece = player_sign * 5
+                        move = PromotionMove(state.selected, pos, promoted_piece)
+                    else:
+                        move = Move(state.selected, pos)
+                    state.perform_move(move)
                     state.reset_ui()
 
     # AI state
