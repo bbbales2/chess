@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import copy
 import numpy
 from typing import List, Dict, Set
 
@@ -153,16 +154,23 @@ class Board:
         
         record_move(move.src, move.dst)
 
+        has_moved_copy = copy.deepcopy(self._has_moved)
+
         # If a king, deal with castling logic
         if abs(piece) == 6:
             for side in [0, 7]:
                 if move.src == Position(4, side):
                     if move.dst == Position(2, side):
-                        record_move(Position(0, side), Position(3, side))
+                        rook_position = Position(0, side)
+                        self._has_moved.add(rook_position)
+                        record_move(rook_position, Position(3, side))
                     elif move.dst == Position(6, side):
-                        record_move(Position(7, side), Position(5, side))
+                        rook_position = Position(7, side)
+                        self._has_moved.add(rook_position)
+                        record_move(rook_position, Position(5, side))
 
-        unmove = Unmove(removes, adds, self.en_passant_pos, self._has_moved)
+        self._has_moved.add(move.src)
+        unmove = Unmove(removes, adds, self.en_passant_pos, has_moved_copy)
 
         return unmove
 

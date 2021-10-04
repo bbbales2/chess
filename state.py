@@ -59,9 +59,9 @@ class GameState:
         if self.board.occupied(pos):
             self.selected = pos
 
-    def perform_move(self, src: Position, dst: Position):
-        """Perform move from source to destination and update state, if it is source occupiers turn."""
-        unmove = self.board.move(Move(src, dst))
+    def perform_move(self, move: Move):
+        """Perform specified move and update state, if it is source occupiers turn."""
+        unmove = self.board.move(move)
         self.moves.append(unmove)
 
     def start_ai_computation(self, executor, player_sign):

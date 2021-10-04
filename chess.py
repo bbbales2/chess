@@ -2,7 +2,7 @@ import sys
 import pygame
 from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_b, K_c, K_v, K_SPACE
 import concurrent.futures
-from board import Board
+from board import Board, Move
 from state import GameState
 from ui import create_background, create_piece_sprites, create_square_sprites, draw_board
 
@@ -61,7 +61,7 @@ def draw():
                 if state.selected is None:
                     state.update_selected(pos)
                 else:
-                    state.perform_move(state.selected, pos)
+                    state.perform_move(Move(state.selected, pos))
                     state.reset_ui()
 
     # AI state
