@@ -287,11 +287,12 @@ def generate_moves(board: Board, player_sign: int, killer_moves: deque):
         if valid_move:
             valid_moves.append(move)
             score = 0
-            if board[move.dst] != 0:
-                score += 1
+            piece = abs(board[move.dst])
+            if piece != 0:
+                score += values[piece]
             #score = player_sign * evaluate_position(board)
             if move in killer_moves:
-                score += 2
+                score += 1000
             scores.append(score)
         board.unmove(unmove)
     
