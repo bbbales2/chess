@@ -248,7 +248,10 @@ def generate_moves(board: Board, player_sign: int, killer_moves: deque):
     
     valid_moves = []
     scores = []
-    attack_moves = find_all_possible_attacks(board, king_position, -1 * player_sign)
+    if king_position is not None:
+        attack_moves = find_all_possible_attacks(board, king_position, -1 * player_sign)
+    else:
+        attack_moves = []
     for move in moves:
         unmove = board.move(move)
         if move.src == king_position or king_position is None:
