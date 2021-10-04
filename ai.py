@@ -159,10 +159,87 @@ def promote_move_if_possible(moves, src, dst, player_sign):
     else:
         moves.append(Move(src, dst))
 
-def generate_moves(board: Board, player_sign: int, killer_moves: deque):
-    # Return a list of moves for the given board state and player
+def find_moves(board: Board, src: Position):
+    moves = []
+    signed_piece = board[src]
+    player_sign = numpy.sign(signed_piece)
+    piece = abs(signed_piece)
     home_row = 0 if player_sign == 1 else 7
 
+    if piece == 1:
+        dst = Position(src.x, src.y + player_sign)
+
+        if board.can_move_space(dst):
+            promote_move_if_possible(moves, src, dst, player_sign)
+
+            dst = Position(src.x, src.y + 2 * player_sign)
+            if src.y == home_row + player_sign and board.can_move_space(dst):
+                moves.append(Move(src, dst))
+
+        for side in [-1, 1]:
+            dst = Position(src.x + side, src.y + player_sign)
+            if (
+                board.can_capture_space(dst, player_sign) or
+                board.en_passant_pos == Position(src.x + side, src.y)
+            ):
+                promote_move_if_possible(moves, src, dst, player_sign)
+
+    elif piece == 2:
+        for dir in knight_directions:
+            dst = src + dir
+
+            if board.can_move_space(dst):
+                moves.append(Move(src, dst))
+            elif board.can_capture_space(dst, player_sign):
+                moves.append(Move(src, dst))
+    elif piece == 3 or piece == 5:
+        for dir in diagonal_directions:
+            for dist in range(1, 8):
+                dst = src + dist * dir
+
+                if board.can_move_space(dst):
+                    moves.append(Move(src, dst))
+                elif board.can_capture_space(dst, player_sign):
+                    moves.append(Move(src, dst))
+                    break
+                else:
+                    break
+    
+    if piece == 4 or piece == 5:
+        for dir in file_directions:
+            for dist in range(1, 8):
+                dst = src + dist * dir
+
+                if board.can_move_space(dst):
+                    moves.append(Move(src, dst))
+                elif board.can_capture_space(dst, player_sign):
+                    moves.append(Move(src, dst))
+                    break
+                else:
+                    break
+    elif piece == 6:
+        for dir in diagonal_directions + file_directions:
+            dst = src + dir
+            if board.can_move_space(dst) or board.can_capture_space(dst, player_sign):
+                move = Move(src, dst)
+                unmove = board.move(move)
+                if find_any_attacking_move(board, dst, -1 * player_sign) is None:
+                    moves.append(move)
+                board.unmove(unmove)
+
+        if src == Position(4, home_row):
+            dst = Position(6, home_row)
+            if castling_possible(board, src, Position(7, home_row), player_sign):
+                moves.append(Move(src, dst))
+
+            dst = Position(2, home_row)
+            if castling_possible(board, src, Position(0, home_row), player_sign):
+                moves.append(Move(src, dst))
+
+    return moves
+
+def generate_moves(board: Board, player_sign: int, killer_moves: deque):
+    # Return a list of moves for the given board state and player
     if player_sign not in [1, -1]:
         raise ValueError("Player sign must be 1 or -1")
 
@@ -175,78 +252,11 @@ def generate_moves(board: Board, player_sign: int, killer_moves: deque):
 
         if signed_piece * player_sign <= 0:
             continue
-        
-        piece = abs(signed_piece)
-        if piece == 1:
-            dst = Position(src.x, src.y + player_sign)
 
-            if board.can_move_space(dst):
-                promote_move_if_possible(moves, src, dst, player_sign)
-
-                dst = Position(src.x, src.y + 2 * player_sign)
-                if src.y == home_row + player_sign and board.can_move_space(dst):
-                    moves.append(Move(src, dst))
-
-            for side in [-1, 1]:
-                dst = Position(src.x + side, src.y + player_sign)
-                if (
-                    board.can_capture_space(dst, player_sign) or
-                    board.en_passant_pos == Position(src.x + side, src.y)
-                ):
-                    promote_move_if_possible(moves, src, dst, player_sign)
-
-        elif piece == 2:
-            for dir in knight_directions:
-                dst = src + dir
-
-                if board.can_move_space(dst):
-                    moves.append(Move(src, dst))
-                elif board.can_capture_space(dst, player_sign):
-                    moves.append(Move(src, dst))
-        elif piece == 3 or piece == 5:
-            for dir in diagonal_directions:
-                for dist in range(1, 8):
-                    dst = src + dist * dir
-
-                    if board.can_move_space(dst):
-                        moves.append(Move(src, dst))
-                    elif board.can_capture_space(dst, player_sign):
-                        moves.append(Move(src, dst))
-                        break
-                    else:
-                        break
-        
-        if piece == 4 or piece == 5:
-            for dir in file_directions:
-                for dist in range(1, 8):
-                    dst = src + dist * dir
-
-                    if board.can_move_space(dst):
-                        moves.append(Move(src, dst))
-                    elif board.can_capture_space(dst, player_sign):
-                        moves.append(Move(src, dst))
-                        break
-                    else:
-                        break
-        elif piece == 6:
+        if board[src] == player_sign * 6:
             king_position = src
-            for dir in diagonal_directions + file_directions:
-                dst = src + dir
-                if board.can_move_space(dst) or board.can_capture_space(dst, player_sign):
-                    move = Move(src, dst)
-                    unmove = board.move(move)
-                    if find_any_attacking_move(board, dst, -1 * player_sign) is None:
-                        moves.append(move)
-                    board.unmove(unmove)
 
-            if src == Position(4, home_row):
-                dst = Position(6, home_row)
-                if castling_possible(board, src, Position(7, home_row), player_sign):
-                    moves.append(Move(src, dst))
-
-                dst = Position(2, home_row)
-                if castling_possible(board, src, Position(0, home_row), player_sign):
-                    moves.append(Move(src, dst))
+        moves.extend(find_moves(board, src))
     
     valid_moves = []
     scores = []
@@ -268,9 +278,9 @@ def generate_moves(board: Board, player_sign: int, killer_moves: deque):
                     valid_move = False
                     break
                 else:
-                    if abs(attacking_piece) in [3, 5]:
-                        offset = attack_move.dst - attack_move.src
-
+                    valid_move = False
+                    offset = attack_move.dst - attack_move.src
+                    if offset.x != 0 and offset.y != 0:
                         dir = Position(1 if offset.x > 0 else -1, 1 if offset.y > 0 else -1)
                         distance = offset.x
 
@@ -278,11 +288,9 @@ def generate_moves(board: Board, player_sign: int, killer_moves: deque):
                             midpoint = attack_move.src + dist * dir
 
                             if board.occupied(midpoint):
-                                valid_move = False
+                                valid_move = True
                                 break
-                    if abs(attacking_piece) in [4, 5]:
-                        offset = attack_move.dst - attack_move.src
-
+                    else:
                         if offset.x == 0:
                             dir = Position(0, 1 if offset.y > 0 else -1)
                             distance = abs(offset.y)
@@ -294,7 +302,7 @@ def generate_moves(board: Board, player_sign: int, killer_moves: deque):
                             midpoint = attack_move.src + dist * dir
 
                             if board.occupied(midpoint):
-                                valid_move = False
+                                valid_move = True
                                 break
                 
                 if not valid_move:
@@ -328,6 +336,14 @@ position_bonus = numpy.array([
     [0, 0, 0, 0, 0, 0, 0, 0],
 ])
 
+piece_mobility_scores = {
+    2 : 10.0,
+    3 : 10.0,
+    4 : 10.0,
+    5 : 10.0,
+    6 : 0.0
+}
+
 def evaluate_position(board):
     # Return score of current board
     total_value = 0.0
@@ -341,7 +357,7 @@ def evaluate_position(board):
         # for pos in positions:
         #     piece = abs(board[pos])
         #     if piece > 1:
-        #         total_value += sign * piece_mobility_score[piece] * len(find_moves(board, pos))
+        #         total_value += sign * piece_mobility_scores[piece] * len(find_moves(board, pos))
 
         total_value += sign * (
             numpy.sum(values[pieces]) +
