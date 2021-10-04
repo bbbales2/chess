@@ -1,12 +1,13 @@
 import pygame
 import math
 from ai import AIGame
-from board import Board, Move, Unmove, Position
+from board import Board, Move, Position
 
 
 def do_ai(board: Board, active_player_sign: int):
     ai = AIGame(board)
     return ai.pick_next_move(active_player_sign)
+
 
 class GameState:
     def __init__(self, board):

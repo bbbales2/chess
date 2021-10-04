@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-import copy
 import numpy
-from typing import List, Dict, Set
+from typing import List, Dict
+
 
 @dataclass(frozen=True)
 class Position:
@@ -20,6 +20,7 @@ class Position:
     def __rmul__(self, other):
         return self * other
 
+
 file_directions = tuple([
     Position(1, 0), Position(-1, 0),
     Position(0, 1), Position(0, -1)
@@ -37,19 +38,23 @@ knight_directions = tuple([
     Position(-2, -1), Position(-2, 1)
 ])
 
+
 @dataclass(frozen=True)
 class PiecePosition:
     piece: int
     pos: Position
+
 
 @dataclass(frozen=True)
 class Move:
     src: Position
     dst: Position
 
+
 @dataclass(frozen=True)
 class PromotionMove(Move):
     promoted_piece: int
+
 
 @dataclass(frozen = True)
 class Unmove:
@@ -57,6 +62,7 @@ class Unmove:
     adds: List[PiecePosition]
     en_passant_pos: Position
     has_moved: int
+
 
 class Board:
     board: numpy.array = numpy.zeros([8, 8]).astype(int)
@@ -82,7 +88,7 @@ class Board:
         ]).astype(int)
 
         self.board = board
-        self.en_passant_pos = None
+        self.en_passant_pos = None  # Expected type Position, not None
         self._has_moved = 0
 
         for y in range(0, 8):
@@ -129,13 +135,13 @@ class Board:
         return False
     
     def __getitem__(self, pos: Position):
-        #if not self.is_valid_position(pos):
+        # if not self.is_valid_position(pos):
         #    raise Exception(f"{pos} is not a valid position")
 
         return self.board[pos.y, pos.x]
     
     def __setitem__(self, pos: Position, val):
-        #if not self.is_valid_position(pos):
+        # if not self.is_valid_position(pos):
         #    raise Exception(f"{pos} is not a valid position")
 
         self.board[pos.y, pos.x] = val
@@ -180,21 +186,22 @@ class Board:
                 if abs(move.src.y - move.dst.y) == 2:
                     next_en_passant_pos = move.dst
                 else:
-                    if self.en_passant_pos == Position(move.dst.x, move.src.y):
-                        adds.append(PiecePosition(self[self.en_passant_pos], self.en_passant_pos))
-                        self[self.en_passant_pos] = 0
+                    ep_pos = self.en_passant_pos
+                    if ep_pos == Position(move.dst.x, move.src.y):
+                        adds.append(PiecePosition(self[ep_pos], ep_pos))
+                        self[ep_pos] = 0
             elif abs(piece) == 6:
-            # If a king, deal with castling logic
+                # If a king, deal with castling logic
                 for side in [0, 7]:
                     if move.src == Position(4, side):
                         if move.dst == Position(2, side):
-                            rook_position = Position(0, side)
-                            self._has_moved = self._has_moved | self.pos_bit[rook_position]
-                            record_move(rook_position, Position(3, side))
+                            rook_pos = Position(0, side)
+                            self._has_moved = self._has_moved | self.pos_bit[rook_pos]
+                            record_move(rook_pos, Position(3, side))
                         elif move.dst == Position(6, side):
-                            rook_position = Position(7, side)
-                            self._has_moved = self._has_moved | self.pos_bit[rook_position]
-                            record_move(rook_position, Position(5, side))
+                            rook_pos = Position(7, side)
+                            self._has_moved = self._has_moved | self.pos_bit[rook_pos]
+                            record_move(rook_pos, Position(5, side))
 
         self.en_passant_pos = next_en_passant_pos
         self._has_moved = self._has_moved | self.pos_bit[move.src]

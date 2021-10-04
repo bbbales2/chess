@@ -1,5 +1,5 @@
 import pygame
-from board import PiecePosition, Position
+from board import Position
 import numpy
 
 
@@ -77,6 +77,13 @@ def create_piece_sprites(size: int):
     return piece_sprites
 
 
+def create_sprites(piece_size: int, square_size: int):
+    """Create all game sprites."""
+    piece_sprites = create_piece_sprites(piece_size)
+    square_sprites = create_square_sprites(square_size)
+    return {"pieces": piece_sprites, "squares": square_sprites}
+
+
 def draw_square_background(screen, x, y, state, square_sprites, square_size):
     ai_sprite = square_sprites[0]
     hover_sprite = square_sprites[1]
@@ -86,7 +93,9 @@ def draw_square_background(screen, x, y, state, square_sprites, square_size):
     if state.ai_move is not None:
         for pos in [state.ai_move.src, state.ai_move.dst]:
             if pos.x == x and pos.y == y:
-                screen.blit(ai_sprite, (x * 60 + 1, (420 - y * 60) + 1, square_size, square_size))
+                x0 = x * 60 + 1
+                y0 = (420 - y * 60) + 1
+                screen.blit(ai_sprite, (x0, y0, square_size, square_size))
 
     if state.hovered is not None and state.hovered.x == x and state.hovered.y == y:
         if state.selected is not None:
@@ -103,16 +112,25 @@ def draw_square_background(screen, x, y, state, square_sprites, square_size):
                 y_offset = 0
             else:
                 y_offset = 29
-            screen.blit(hover_sprite_small, (x * 60 + 1 + x_offset, (420 - y * 60) + 1 + y_offset, int(square_size / 2), int(square_size / 2)))
+            x0 = x * 60 + 1 + x_offset
+            y0 = (420 - y * 60) + 1 + y_offset
+            blit_rect = (x0, y0, int(square_size / 2), int(square_size / 2))
+            screen.blit(hover_sprite_small, blit_rect)
         else:
-            screen.blit(hover_sprite, (x * 60 + 1, (420 - y * 60) + 1, square_size, square_size))
+            x0 = x * 60 + 1
+            y0 = (420 - y * 60) + 1
+            screen.blit(hover_sprite, (x0, y0, square_size, square_size))
 
     if state.selected is not None and state.selected.x == x and state.selected.y == y:
-        screen.blit(selected_sprite, (x * 60 + 1, (420 - y * 60) + 1, square_size, square_size))
+        x0 = x * 60 + 1
+        y0 = (420 - y * 60) + 1
+        screen.blit(selected_sprite, (x0, y0, square_size, square_size))
 
 
-def draw_board(screen, background, state, piece_sprites, square_sprites, square_size, controls_text):
+def draw_board(screen, background, state, sprites, square_size, controls_text):
     screen.blit(background, (0, 0))
+    square_sprites = sprites["squares"]
+    piece_sprites = sprites["pieces"]
     for x in range(8):
         for y in range(8):
             # Draw square background
@@ -125,7 +143,8 @@ def draw_board(screen, background, state, piece_sprites, square_sprites, square_
             else:
                 signed_selected_piece = 0
 
-            if pos == state.hovered and abs(signed_selected_piece) == 1 and pos.y in [0, 7]:
+            ssel = abs(signed_selected_piece) == 1
+            if pos == state.hovered and ssel and pos.y in [0, 7]:
                 player_sign = numpy.sign(signed_selected_piece)
 
                 sprite = piece_sprites["small"][player_sign][2]
