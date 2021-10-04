@@ -1,6 +1,6 @@
 import sys
 import pygame
-from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_b, K_c, K_v, K_SPACE
+from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_b, K_c, K_v, K_p, K_SPACE
 import numpy
 import concurrent.futures
 from board import Board, Move, PromotionMove
@@ -42,6 +42,7 @@ def draw():
 
         # Exit
         if event.type == QUIT:
+            state.print_move_history()
             sys.exit()
 
         # Key press
@@ -52,6 +53,8 @@ def draw():
                 state.start_ai_computation(executor, 1)
             elif event.key == K_v:
                 state.start_ai_computation(executor, -1)
+            elif event.key == K_p:
+                state.print_move_history()
             elif event.key == K_SPACE:
                 state.execute_ai_move()
             state.reset_ui()

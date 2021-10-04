@@ -104,3 +104,15 @@ class GameState:
         """Execute the current suggested AI move."""
         if self.ai_move is not None:
             self.perform_move(self.ai_move)
+
+    def print_move_history(self):
+        """Print current game history."""
+        print(" ")
+        print("---------------------------- MOVES ----------------------------------")
+        L = len(self.moves)
+        if L == 0:
+            print("No moves yet.")
+        else:
+            for m_idx in range(0, L):
+                move_str = self.moves[m_idx].human_readable()
+                print("(" + str(m_idx) + ") " + move_str)

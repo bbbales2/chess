@@ -1,25 +1,6 @@
-from dataclasses import dataclass
 import numpy
-from typing import List, Dict
-
-
-@dataclass(frozen=True)
-class Position:
-    x: int
-    y: int
-
-    def __add__(self, other):
-        return Position(self.x + other.x, self.y + other.y)
-
-    def __sub__(self, other):
-        return Position(self.x - other.x, self.y - other.y)
-    
-    def __mul__(self, other):
-        return Position(self.x * other, self.y * other)
-    
-    def __rmul__(self, other):
-        return self * other
-
+from typing import Dict
+from move import Position, PiecePosition, Move, PromotionMove, Unmove
 
 file_directions = tuple([
     Position(1, 0), Position(-1, 0),
@@ -37,31 +18,6 @@ knight_directions = tuple([
     Position(1, -2), Position(-1, -2),
     Position(-2, -1), Position(-2, 1)
 ])
-
-
-@dataclass(frozen=True)
-class PiecePosition:
-    piece: int
-    pos: Position
-
-
-@dataclass(frozen=True)
-class Move:
-    src: Position
-    dst: Position
-
-
-@dataclass(frozen=True)
-class PromotionMove(Move):
-    promoted_piece: int
-
-
-@dataclass(frozen = True)
-class Unmove:
-    removes: List[PiecePosition]
-    adds: List[PiecePosition]
-    en_passant_pos: Position
-    has_moved: int
 
 
 class Board:
