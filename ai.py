@@ -65,7 +65,7 @@ def find_any_attacking_move(board: Board, pos: Position, player_sign):
     return None
 
 def find_all_possible_attacks(board: Board, pos: Position, player_sign):
-    attacking_moves = []
+    attacks = []
     # Search for pawns
     for side in [-1, 1]:
         src = pos + Position(side, -player_sign)
@@ -73,8 +73,9 @@ def find_all_possible_attacks(board: Board, pos: Position, player_sign):
         if not board.is_valid_position(src):
             continue
 
-        if board[src] == player_sign * 1:
-            attacking_moves.append(Move(src, pos))
+        piece = board[src]
+        if piece == player_sign * 1:
+            attacks.append((piece, Move(src, pos)))
 
     # Search for rooks/queens
     for dir in file_directions:
@@ -88,7 +89,7 @@ def find_all_possible_attacks(board: Board, pos: Position, player_sign):
                 piece = board[src]
                 if player_sign == numpy.sign(piece):
                     if abs(piece) in [4, 5]:
-                        attacking_moves.append(Move(src, pos))
+                        attacks.append((piece, Move(src, pos)))
                     else:
                         break
 
@@ -104,7 +105,7 @@ def find_all_possible_attacks(board: Board, pos: Position, player_sign):
                 piece = player_sign * board[src]
                 if player_sign == numpy.sign(piece):
                     if abs(piece) in [3, 5]:
-                        attacking_moves.append(Move(src, pos))
+                        attacks.append((piece, Move(src, pos)))
                     else:
                         break
     
@@ -118,7 +119,7 @@ def find_all_possible_attacks(board: Board, pos: Position, player_sign):
         if board.occupied(src):
             piece = board[src]
             if player_sign == numpy.sign(piece) and abs(piece) == 2:
-                attacking_moves.append(Move(src, pos))
+                attacks.append((piece, Move(src, pos)))
 
     # Search for kings
     for dir in file_directions + diagonal_directions:
@@ -127,10 +128,11 @@ def find_all_possible_attacks(board: Board, pos: Position, player_sign):
         if not board.is_valid_position(src):
             continue
         
-        if board[src] == player_sign * 6:
-            attacking_moves.append(Move(src, pos))
+        piece = board[src]
+        if piece == player_sign * 6:
+            attacks.append((piece, Move(src, pos)))
 
-    return attacking_moves
+    return attacks
 
 def castling_possible(board, king_position, rook_position, player_sign):
     dir = Position(-1 if king_position.x > rook_position.x else 1, 0)
@@ -249,27 +251,36 @@ def generate_moves(board: Board, player_sign: int, killer_moves: deque):
     valid_moves = []
     scores = []
     if king_position is not None:
-        attack_moves = find_all_possible_attacks(board, king_position, -1 * player_sign)
+        attacks = find_all_possible_attacks(board, king_position, -1 * player_sign)
     else:
-        attack_moves = []
+        attacks = []
     for move in moves:
         unmove = board.move(move)
         if move.src == king_position or king_position is None:
             valid_move = True
         else:
             valid_move = True
-            for attack_move in attack_moves:
-                attacking_piece = board[attack_move.src]
+            for attacking_piece, attack_move in attacks:
+                if attacking_piece != board[attack_move.src]:
+                    continue
 
-                if abs(attacking_piece) in [1, 2]:
+                if abs(attacking_piece) in [1, 2, 6]:
                     valid_move = False
+                    break
                 else:
                     if abs(attacking_piece) in [3, 5]:
                         offset = attack_move.dst - attack_move.src
 
                         dir = Position(1 if offset.x > 0 else -1, 1 if offset.y > 0 else -1)
                         distance = offset.x
-                    elif abs(attacking_piece) in [4, 5]:
+
+                        for dist in range(1, distance):
+                            midpoint = attack_move.src + dist * dir
+
+                            if board.occupied(midpoint):
+                                valid_move = False
+                                break
+                    if abs(attacking_piece) in [4, 5]:
                         offset = attack_move.dst - attack_move.src
 
                         if offset.x == 0:
@@ -279,12 +290,12 @@ def generate_moves(board: Board, player_sign: int, killer_moves: deque):
                             dir = Position(1 if offset.x > 0 else -1, 0)
                             distance = abs(offset.x)
 
-                    for dist in range(1, distance):
-                        midpoint = attack_move.src + dist * dir
+                        for dist in range(1, distance):
+                            midpoint = attack_move.src + dist * dir
 
-                        if board.occupied(midpoint):
-                            valid_move = False
-                            break
+                            if board.occupied(midpoint):
+                                valid_move = False
+                                break
                 
                 if not valid_move:
                     break
