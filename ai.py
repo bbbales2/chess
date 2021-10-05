@@ -1,7 +1,9 @@
 from typing import List, Tuple, Deque
 from collections import deque
-from board import Board, PromotionMove, Move, Unmove, Position, diagonal_directions, file_directions, knight_directions
+from board import Board, PromotionMove, Move, Unmove, Position, diagonal_directions,\
+    file_directions, knight_directions
 import numpy
+
 
 def find_any_attacking_move(board: Board, pos: Position, player_sign):
     # Search for pawns
@@ -63,6 +65,7 @@ def find_any_attacking_move(board: Board, pos: Position, player_sign):
             return Move(src, pos)
     
     return None
+
 
 def find_all_possible_attacks(board: Board, pos: Position, player_sign):
     attacks = []
@@ -134,21 +137,24 @@ def find_all_possible_attacks(board: Board, pos: Position, player_sign):
 
     return attacks
 
+
 def castling_possible(board, king_position, rook_position, player_sign):
     dir = Position(-1 if king_position.x > rook_position.x else 1, 0)
     for dist in range(1, abs(rook_position.x - king_position.x)):
-        middle_position = king_position + dist * dir
-        if board[middle_position] != 0:
+        middle_pos = king_position + dist * dir
+        if board[middle_pos] != 0:
             return False
 
         if dist < 3:
-            if find_any_attacking_move(board, middle_position, -1 * player_sign) is not None:
+            attack_move = find_any_attacking_move(board, middle_pos, -1 * player_sign)
+            if attack_move is not None:
                 return False
 
     if not board.has_moved(king_position) and not board.has_moved(rook_position):
         return True
     else:
         return False
+
 
 def promote_move_if_possible(moves, src, dst, player_sign):
     if dst.y in [0, 7]:
@@ -158,6 +164,7 @@ def promote_move_if_possible(moves, src, dst, player_sign):
         moves.append(PromotionMove(src, dst, player_sign * 5))
     else:
         moves.append(Move(src, dst))
+
 
 def find_moves(board: Board, src: Position):
     moves = []
@@ -238,6 +245,7 @@ def find_moves(board: Board, src: Position):
 
     return moves
 
+
 def generate_moves(board: Board, player_sign: int, killer_moves: deque):
     # Return a list of moves for the given board state and player
     if player_sign not in [1, -1]:
@@ -281,7 +289,9 @@ def generate_moves(board: Board, player_sign: int, killer_moves: deque):
                     valid_move = False
                     offset = attack_move.dst - attack_move.src
                     if offset.x != 0 and offset.y != 0:
-                        dir = Position(1 if offset.x > 0 else -1, 1 if offset.y > 0 else -1)
+                        pos_x = 1 if offset.x > 0 else -1
+                        pos_y = 1 if offset.y > 0 else -1
+                        dir = Position(pos_x, pos_y)
                         distance = offset.x
 
                         for dist in range(1, distance):
@@ -314,7 +324,7 @@ def generate_moves(board: Board, player_sign: int, killer_moves: deque):
             piece = abs(board[move.dst])
             if piece != 0:
                 score += values[piece]
-            #score = player_sign * evaluate_position(board)
+            # score = player_sign * evaluate_position(board)
             if move in killer_moves:
                 score += 1000
             scores.append(score)
@@ -323,6 +333,8 @@ def generate_moves(board: Board, player_sign: int, killer_moves: deque):
     sorted_idx = numpy.argsort(scores)
     return [valid_moves[idx] for idx in reversed(sorted_idx)]
 
+
+# Piece values [-, pawn, knight, bishop, rook, queen, king]
 values = numpy.array([0.0, 100.0, 300.0, 320.0, 500.0, 900.0, 200000.0])
 
 position_bonus = numpy.array([
@@ -337,12 +349,13 @@ position_bonus = numpy.array([
 ])
 
 piece_mobility_scores = {
-    2 : 10.0,
-    3 : 10.0,
-    4 : 10.0,
-    5 : 10.0,
-    6 : 0.0
+    2: 10.0,
+    3: 10.0,
+    4: 10.0,
+    5: 10.0,
+    6: 0.0
 }
+
 
 def evaluate_position(board):
     # Return score of current board
@@ -357,7 +370,8 @@ def evaluate_position(board):
         # for pos in positions:
         #     piece = abs(board[pos])
         #     if piece > 1:
-        #         total_value += sign * piece_mobility_scores[piece] * len(find_moves(board, pos))
+        #         total_value += sign * piece_mobility_scores[piece] *
+        #         len(find_moves(board, pos))
 
         total_value += sign * (
             numpy.sum(values[pieces]) +
@@ -381,7 +395,7 @@ class AIGame:
         clist.append(unmove)
         return ply + 1
 
-    def restore_position(self, clist : List[Unmove], ply : int):
+    def restore_position(self, clist: List[Unmove], ply : int):
         # Pop a board change off the clist to return the board to a previous state
         unmove = clist.pop()
         self.board.unmove(unmove)
@@ -445,13 +459,11 @@ class AIGame:
             scores[ply] = player_sign * -float('inf')
             while ply < len(pc[0]):
                 next_move = pc[0][ply]
-
                 moves[ply].remove(next_move)
                 moves[ply] = [next_move] + moves[ply]
-
                 ply = self.update_position(next_move, clist, ply)
-
-                moves[ply] = generate_moves(self.board, player_sign * (-1)**ply, killer_moves[ply])
+                kms = killer_moves[ply]
+                moves[ply] = generate_moves(self.board, player_sign * (-1)**ply, kms)
                 mptr[ply] = 0
                 if len(moves[ply]) == 0:
                     scores[ply] = evaluate_position(self.board)
@@ -472,7 +484,7 @@ class AIGame:
                         if len(killer_moves[ply]) >= self.killer_move_count:
                             killer_moves[ply].popleft()
                         killer_moves[ply].append(moves[ply][mptr[ply]])
-                        mptr[ply] = len(moves[ply]) # skip the rest of the moves
+                        mptr[ply] = len(moves[ply])  # skip the rest of the moves
                     else:
                         mptr[ply] += 1
                 else:
@@ -480,7 +492,9 @@ class AIGame:
                     ply = self.update_position(next_move, clist, ply)
                     if ply < current_dmax:
                         # If not at last layer, advance layer
-                        moves[ply] = generate_moves(self.board, player_sign * (-1)**ply, killer_moves[ply])
+                        moves[ply] = generate_moves(self.board,
+                                                    player_sign * (-1)**ply,
+                                                    killer_moves[ply])
                         mptr[ply] = 0
                         if len(moves[ply]) == 0:
                             scores[ply] = evaluate_position(self.board)
@@ -491,13 +505,14 @@ class AIGame:
                     elif ply == current_dmax:
                         # If at last layer, evaluate score
                         scores[ply] = evaluate_position(self.board)
-                        prune = self.pc_update(mptr, moves, scores, pc, ply, player_sign)
+                        prune = self.pc_update(mptr, moves, scores, pc, ply,
+                                               player_sign)
                         ply = self.restore_position(clist, ply)
                         if prune:
                             if len(killer_moves[ply]) >= self.killer_move_count:
                                 killer_moves[ply].popleft()
                             killer_moves[ply].append(next_move)
-                            mptr[ply] = len(moves[ply]) # skip the rest of the moves
+                            mptr[ply] = len(moves[ply])  # skip the rest of the moves
                         else:
                             mptr[ply] += 1
                     else:

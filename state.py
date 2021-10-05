@@ -1,25 +1,28 @@
 import pygame
 import math
 from ai import AIGame
-from board import Board, Move, Unmove, Position
+from board import Board, Move, Position
 
 
 def do_ai(board: Board, active_player_sign: int):
     ai = AIGame(board)
     return ai.pick_next_move(active_player_sign)
 
+
 class GameState:
     def __init__(self, board):
         self.board = board
         self.selected = None
         self.hovered = None
+        self.hovered_left = 1
+        self.hovered_top = 2
         self.moves = []
         self.ai = None
         self.ai_move = None
         text_font = pygame.font.Font(None, 32)
-        text_color = (80, 80, 180)
-        self.compute_text = text_font.render("Computing...", 1, text_color)
-        self.done_text = text_font.render("Done! (press SPACE)", 1, text_color)
+        ai_text_color = (60, 70, 200)
+        self.compute_text = text_font.render("Computing...", 1, ai_text_color)
+        self.done_text = text_font.render("Done! (press SPACE)", 1, ai_text_color)
         self.black_turn_text = text_font.render("Black to move.", 1, (5, 5, 5))
         self.white_turn_text = text_font.render("White to move.", 1, (250, 250, 250))
 
@@ -101,3 +104,15 @@ class GameState:
         """Execute the current suggested AI move."""
         if self.ai_move is not None:
             self.perform_move(self.ai_move)
+
+    def print_move_history(self):
+        """Print current game history."""
+        print(" ")
+        print("---------------------------- MOVES ----------------------------------")
+        L = len(self.moves)
+        if L == 0:
+            print("No moves yet.")
+        else:
+            for m_idx in range(0, L):
+                move_str = self.moves[m_idx].human_readable()
+                print("(" + str(m_idx) + ") " + move_str)

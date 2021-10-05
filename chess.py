@@ -1,11 +1,11 @@
 import sys
 import pygame
-from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_b, K_c, K_v, K_SPACE
+from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_b, K_c, K_v, K_p, K_SPACE
 import numpy
 import concurrent.futures
 from board import Board, Move, PromotionMove
 from state import GameState
-from ui import create_background, create_piece_sprites, create_square_sprites, draw_board
+from ui import create_background, create_sprites, draw_board
 
 
 # Initialize and create UI
@@ -20,10 +20,10 @@ pygame.display.set_caption("Chess")
 background = create_background(screen)
 
 # Create sprites and fonts
-piece_sprites = create_piece_sprites(piece_size)
-square_sprites = create_square_sprites(square_size)
+sprites = create_sprites(piece_size, square_size)
 small_font = pygame.font.Font(None, 28)
-controls_text = small_font.render("C = AI (white),   V = AI (black),   B = undo", 1, (240, 240, 80))
+controls_text = "C = AI (white),  V = AI (black),  B = undo"
+controls = small_font.render(controls_text, 1, (230, 230, 120))
 
 # Create clock, board and global game state
 clock = pygame.time.Clock()
@@ -42,6 +42,7 @@ def draw():
 
         # Exit
         if event.type == QUIT:
+            state.print_move_history()
             sys.exit()
 
         # Key press
@@ -52,6 +53,8 @@ def draw():
                 state.start_ai_computation(executor, 1)
             elif event.key == K_v:
                 state.start_ai_computation(executor, -1)
+            elif event.key == K_p:
+                state.print_move_history()
             elif event.key == K_SPACE:
                 state.execute_ai_move()
             state.reset_ui()
@@ -85,7 +88,7 @@ def draw():
     state.check_ai_status()
 
     # Draw the board
-    draw_board(screen, background, state, piece_sprites, square_sprites, square_size, controls_text)
+    draw_board(screen, background, state, sprites, square_size, controls)
 
 
 # Game loop
